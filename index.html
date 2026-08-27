@@ -1,0 +1,121 @@
+<!doctype html>
+<html lang="es">
+
+<head>
+  <meta charset="UTF-8" />
+  <link rel="icon" type="image/x-icon" href="/favicon.ico" />
+  <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <meta name="description" content="eTribunal | Voz. Debate. Sentencia." />
+  <meta name="keywords" content="etribunal, social tribunal, community voting, cases, debate" />
+  <meta name="author" content="eTribunal Team" />
+  <meta name="robots" content="index, follow" />
+
+  <!-- OpenGraph / Facebook -->
+  <meta property="og:type" content="website" />
+  <meta property="og:url" content="https://etribunal.app/" />
+  <meta property="og:title" content="eTribunal | Voz. Debate. Sentencia." />
+  <meta property="og:description" content="Donde la comunidad decide quién tiene la razón." />
+  <meta property="og:site_name" content="eTribunal" />
+  <meta property="og:locale" content="es_ES" />
+
+  <!-- Twitter Card -->
+  <meta name="twitter:card" content="summary_large_image" />
+  <meta name="twitter:title" content="eTribunal | Voz. Debate. Sentencia." />
+  <meta name="twitter:description" content="Donde la comunidad decide quién tiene la razón." />
+
+  <!-- Security -->
+  <meta http-equiv="Content-Security-Policy"
+    content="default-src 'self'; script-src 'self' 'unsafe-inline'; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src 'self' https://fonts.gstatic.com; img-src 'self' data: https:; connect-src 'self' http://localhost:* ws://localhost:*;" />
+  <meta http-equiv="X-Content-Type-Options" content="nosniff" />
+  <meta name="referrer" content="strict-origin-when-cross-origin" />
+
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link rel="dns-prefetch" href="http://localhost:3001" />
+  <title>eTribunal | Voz. Debate. Sentencia.</title>
+  <style>
+    /* Inline skeleton — se descarta cuando la app monta */
+    :root {
+      --bg: #1A1A22;
+      --card: #22222E;
+      --text-muted: #A0A0B0;
+    }
+
+    html,
+    body {
+      margin: 0;
+      padding: 0;
+      background: var(--bg);
+    }
+
+    #root {
+      min-height: 100dvh;
+    }
+
+    .sk-wrapper {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      min-height: 100dvh;
+    }
+
+    .sk-container {
+      text-align: center;
+      padding: 2rem;
+    }
+
+    .sk-logo {
+      width: 64px;
+      height: 64px;
+      border-radius: 50%;
+      background: var(--card);
+      margin: 0 auto 1rem;
+      animation: pulse 1.5s ease-in-out infinite;
+    }
+
+    .sk-line {
+      height: 14px;
+      border-radius: 8px;
+      background: var(--card);
+      margin: 0 auto;
+      animation: pulse 1.5s ease-in-out infinite;
+    }
+
+    .sk-line:nth-child(2) {
+      width: 200px;
+    }
+
+    .sk-line:nth-child(3) {
+      width: 140px;
+      margin-top: 10px;
+    }
+
+    @keyframes pulse {
+
+      0%,
+      100% {
+        opacity: 0.4;
+      }
+
+      50% {
+        opacity: 0.8;
+      }
+    }
+  </style>
+</head>
+
+<body>
+  <div id="root">
+    <div class="sk-wrapper">
+      <div class="sk-container" aria-label="Cargando eTribunal">
+        <div class="sk-logo"></div>
+        <div class="sk-line"></div>
+        <div class="sk-line"></div>
+      </div>
+    </div>
+  </div>
+  <script type="module" src="/src/main.tsx"></script>
+</body>
+
+</html>

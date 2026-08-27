@@ -1,0 +1,113 @@
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap');
+@import "tailwindcss";
+
+@theme {
+  --color-background: var(--bg);
+  --color-card: var(--card);
+  --color-text-main: var(--text);
+  --color-text-muted: var(--text-muted);
+  --color-border-main: var(--border);
+  --color-primary: var(--primary);
+  --color-secondary: var(--secondary);
+  --color-success: var(--success);
+  --font-sans: "Inter", ui-sans-serif, system-ui, sans-serif;
+}
+
+:root {
+  --bg: #1A1A22;
+  --card: #22222E;
+  --text: #FFFFFF;
+  --text-muted: #A0A0B0;
+  --border: #2A2A35;
+  --primary: #336699;
+  --secondary: #FF6600;
+  --success: #4CAF50;
+}
+
+[data-theme="light"] {
+  --bg: #f0f2f5;
+  --card: #FFFFFF;
+  --text: #0F0F14;
+  --text-muted: #5A5A6A;
+  --border: #D1D1DB;
+  --primary: #336699;
+  --secondary: #FF6600;
+  --success: #4CAF50;
+}
+
+body {
+  font-family: "Inter", ui-sans-serif, system-ui, sans-serif;
+  background-color: var(--bg);
+  color: var(--text);
+  margin: 0;
+  padding: 0;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+  overflow-x: hidden;
+}
+
+button {
+  cursor: pointer;
+}
+
+input[type="password"]::-ms-reveal,
+input[type="password"]::-ms-clear {
+  display: none;
+}
+
+@utility animate-slide-in {
+  animation: slide-in 0.3s ease-out;
+}
+
+@utility animate-vote-bounce {
+  animation: vote-bounce 0.3s ease-out;
+}
+
+@utility glass {
+  background: color-mix(in srgb, var(--card) 80%, transparent);
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+  border: 1px solid color-mix(in srgb, var(--border) 30%, transparent);
+}
+
+@utility no-scrollbar {
+  &::-webkit-scrollbar {
+    display: none;
+  }
+  -ms-overflow-style: none;
+  scrollbar-width: none;
+}
+
+@utility subtle-scrollbar {
+  &::-webkit-scrollbar {
+    width: 4px;
+    height: 4px;
+  }
+  &::-webkit-scrollbar-track {
+    background: transparent;
+  }
+  &::-webkit-scrollbar-thumb {
+    background: var(--border);
+    border-radius: 999px;
+  }
+  &:hover::-webkit-scrollbar-thumb {
+    background: var(--text-muted);
+  }
+}
+
+@keyframes slide-in {
+  from {
+    opacity: 0;
+    transform: translateX(100%);
+  }
+  to {
+    opacity: 1;
+    transform: translateX(0);
+  }
+}
+
+@keyframes vote-bounce {
+  0% { transform: scale(1); }
+  50% { transform: scale(1.05); }
+  100% { transform: scale(1); }
+}
