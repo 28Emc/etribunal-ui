@@ -22,7 +22,7 @@ import { SEO } from '@components/ui/SEO';
 import { CaseDetailSkeleton } from '@components/ui/Skeleton';
 
 export function CaseDetailPage() {
-  const { id, username, slug } = useParams<{ id?: string; username?: string; slug?: string }>();
+  const { id } = useParams<{ id?: string }>();
   const navigate = useNavigate();
   const { currentUser, token } = useAuth();
   const { t } = useTranslation();
@@ -60,15 +60,13 @@ export function CaseDetailPage() {
   const { toggleSave } = useSavedCases();
 
   useEffect(() => {
-    const caseIdentifier = id || (username && slug ? `${username}/${slug}` : undefined);
+    const caseIdentifier = id;
     if (!caseIdentifier) return;
 
     const fetchSingleCase = async () => {
       setIsLoading(true);
       try {
-        const caseRes = await apiClient.get<any>(
-          id ? `/cases/${id}` : `/cases/slug/${encodeURIComponent(username!)}/${encodeURIComponent(slug!)}`
-        );
+        const caseRes = await apiClient.get<any>(`/cases/${caseIdentifier}`);
         
         await fetchInitialComments(caseRes.id);
         
@@ -84,7 +82,7 @@ export function CaseDetailPage() {
       }
     };
     fetchSingleCase();
-  }, [id, username, slug, currentUser?.id, fetchInitialComments]);
+  }, [id, currentUser?.id, fetchInitialComments]);
 
   useEffect(() => {
     if (!caseData?.id) return;

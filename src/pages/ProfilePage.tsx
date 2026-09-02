@@ -95,7 +95,8 @@ export const ProfilePage: React.FC = () => {
         id: data.id,
         name: data.username,
         email: data.email || '',
-        avatar: data.avatar_url,
+        // Si es mi propio perfil, preservo el avatar del auth context (evita avatar anónimo del endpoint público)
+        avatar: isOwnProfile && currentUser?.avatar ? currentUser.avatar : data.avatar_url,
         bio: data.bio || '',
         casesCreated: [],
         votes: {},

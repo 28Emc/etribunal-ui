@@ -169,11 +169,14 @@ async function refreshAccessToken(): Promise<string | null> {
 
   try {
     const response = await axios.post(`${API_URL}/auth/refresh`, {
-      user_id: userId,
       refresh_token: refreshToken,
     });
 
-    const { access_token, refresh_token: newRefreshToken } = response.data;
+    // El backend envuelve la respuesta en ApiResponse<T>:
+    //   { data: { access_token, refresh_token, ... }, message, statusCode }
+    // Hacemos unwrap de response.data.data.
+    const { access_token, refresh_token: newRefreshToken } =
+      response.data?.data ?? {};
 
     if (access_token) {
       // Persistir en el mismo storage que los tokens originales

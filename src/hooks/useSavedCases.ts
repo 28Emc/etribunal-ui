@@ -54,12 +54,12 @@ export function useSavedCases(): UseSavedCasesReturn {
     setIsLoading(true);
     try {
       const data = await apiClient.post(
-        `/cases/${caseId}/save`,
+        `/saved-cases/${caseId}/save`,
         {}
       ) as any;
       
       const saved = data.saved;
-      const anchorsCount = data.total_anchors;
+      const anchorsCount = data.caseResponse?.total_anchors ?? 0;
       setIsSaved(saved);
       return { saved, anchorsCount };
     } catch (error) {
@@ -74,7 +74,7 @@ export function useSavedCases(): UseSavedCasesReturn {
     if (!authStorage.isAuthenticated()) return;
 
     try {
-      const data = await apiClient.get(`/cases/${caseId}/saved`) as any;
+      const data = await apiClient.get(`/saved-cases/${caseId}/saved`) as any;
       setIsSaved(data.saved);
     } catch (error) {
       console.error('Error checking saved status:', error);

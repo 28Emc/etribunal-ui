@@ -57,7 +57,7 @@ describe('useCaseShares', () => {
 
     expect(result.current.sharedCases).toHaveLength(2);
     expect(result.current.total).toBe(2);
-    expect(mockGet).toHaveBeenCalledWith('/cases/shared?skip=0&take=20');
+    expect(mockGet).toHaveBeenCalledWith('/saved-cases/shared?skip=0&take=20');
   });
 
   it('fetchSharedCases debería soportar paginación', async () => {
@@ -69,13 +69,13 @@ describe('useCaseShares', () => {
       await result.current.fetchSharedCases(5, 10);
     });
 
-    expect(mockGet).toHaveBeenCalledWith('/cases/shared?skip=5&take=10');
+    expect(mockGet).toHaveBeenCalledWith('/saved-cases/shared?skip=5&take=10');
   });
 
   it('toggleShare debería compartir un caso', async () => {
     const { result } = renderHook(() => useCaseShares());
 
-    mockPost.mockResolvedValue({ shared: true, case: makeSharedCase('c1') });
+    mockPost.mockResolvedValue({ shared: true, caseResponse: makeSharedCase('c1') });
 
     let shared: any;
     await act(async () => {
@@ -85,7 +85,7 @@ describe('useCaseShares', () => {
     expect(shared).toBe(true);
     expect(result.current.isShared).toBe(true);
     expect(result.current.sharedCases).toHaveLength(1);
-    expect(mockPost).toHaveBeenCalledWith('/cases/c1/share', {});
+    expect(mockPost).toHaveBeenCalledWith('/saved-cases/c1/share', {});
   });
 
   it('toggleShare debería descompartir un caso', async () => {
@@ -110,7 +110,7 @@ describe('useCaseShares', () => {
     });
 
     expect(result.current.isShared).toBe(true);
-    expect(mockGet).toHaveBeenCalledWith('/cases/c1/shared');
+    expect(mockGet).toHaveBeenCalledWith('/saved-cases/c1/shared');
   });
 
   it('getShareCount debería obtener conteo de compartidos', async () => {
@@ -124,7 +124,7 @@ describe('useCaseShares', () => {
     });
 
     expect(count).toBe(7);
-    expect(mockGet).toHaveBeenCalledWith('/cases/c1/shares');
+    expect(mockGet).toHaveBeenCalledWith('/saved-cases/c1/shares');
   });
 
   it('getShareCount debería retornar 0 si error', async () => {
@@ -179,10 +179,10 @@ describe('useCaseShares', () => {
     expect(result.current.isShared).toBe(false);
   });
 
-  it('toggleShare usa sharedCase cuando case no está presente', async () => {
+  it('toggleShare usa caseResponse cuando viene en la respuesta', async () => {
     const { result } = renderHook(() => useCaseShares());
 
-    mockPost.mockResolvedValue({ shared: true, sharedCase: makeSharedCase('c2') });
+    mockPost.mockResolvedValue({ shared: true, caseResponse: makeSharedCase('c2') });
 
     await act(async () => {
       await result.current.toggleShare('c2');
@@ -191,7 +191,7 @@ describe('useCaseShares', () => {
     expect(result.current.isShared).toBe(true);
     expect(result.current.sharedCases).toHaveLength(1);
     expect(result.current.sharedCases[0].case_id).toBe('c2');
-    expect(mockPost).toHaveBeenCalledWith('/cases/c2/share', {});
+    expect(mockPost).toHaveBeenCalledWith('/saved-cases/c2/share', {});
   });
 
   it('checkShared maneja respuesta con is_shared', async () => {

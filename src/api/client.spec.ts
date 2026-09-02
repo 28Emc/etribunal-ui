@@ -226,7 +226,9 @@ describe('interceptores', () => {
 
       const secondPromise = shared.responseErrorHandler(error2);
 
-      refreshResolver({ data: { access_token: 'new-token', refresh_token: 'new-refresh' } });
+      refreshResolver({
+        data: { data: { access_token: 'new-token', refresh_token: 'new-refresh' } },
+      });
 
       await expect(firstPromise).resolves.not.toThrow();
       await expect(secondPromise).resolves.not.toThrow();
@@ -296,7 +298,7 @@ describe('interceptores', () => {
       localStorage.setItem('etribunal_access_token', 'old-token');
 
       shared.axiosPost.mockResolvedValue({
-        data: { access_token: 'new-access', refresh_token: 'new-refresh' },
+        data: { data: { access_token: 'new-access', refresh_token: 'new-refresh' } },
       });
 
       const error: any = new Error('Unauthorized');

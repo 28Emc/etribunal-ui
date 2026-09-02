@@ -194,9 +194,9 @@ export const saveCase = createAsyncThunk(
     }
     try {
       if (save) {
-        await apiClient.post(`/cases/${caseId}/save`, {});
+        await apiClient.post(`/saved-cases/${caseId}/save`, {});
       } else {
-        await apiClient.delete(`/cases/${caseId}/save`);
+        await apiClient.delete(`/saved-cases/${caseId}/save`);
       }
       return { caseId, isSaved: save };
     } catch (error) {
@@ -222,7 +222,8 @@ export const reactToCase = createAsyncThunk(
     }
     try {
       const data: any = await apiClient.post('/reactions', {
-        case_id: caseId,
+        target_type: 'CASE',
+        target_id: caseId,
         emoji,
       });
       return { caseId, ...data };

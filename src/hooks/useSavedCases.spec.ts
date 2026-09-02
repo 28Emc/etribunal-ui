@@ -66,7 +66,7 @@ describe('useSavedCases', () => {
   it('toggleSave debería guardar/desguardar un caso', async () => {
     const { result } = renderHook(() => useSavedCases());
 
-    mockPost.mockResolvedValue({ saved: true, total_anchors: 3 });
+    mockPost.mockResolvedValue({ saved: true, caseResponse: { total_anchors: 3 } });
 
     let response: any;
     await act(async () => {
@@ -76,13 +76,13 @@ describe('useSavedCases', () => {
     expect(response!.saved).toBe(true);
     expect(response!.anchorsCount).toBe(3);
     expect(result.current.isSaved).toBe(true);
-    expect(mockPost).toHaveBeenCalledWith('/cases/case-1/save', {});
+    expect(mockPost).toHaveBeenCalledWith('/saved-cases/case-1/save', {});
   });
 
   it('toggleSave debería alternar a no guardado', async () => {
     const { result } = renderHook(() => useSavedCases());
 
-    mockPost.mockResolvedValue({ saved: false, total_anchors: 2 });
+    mockPost.mockResolvedValue({ saved: false, caseResponse: null });
 
     await act(async () => {
       await result.current.toggleSave('case-1');
@@ -101,7 +101,7 @@ describe('useSavedCases', () => {
     });
 
     expect(result.current.isSaved).toBe(true);
-    expect(mockGet).toHaveBeenCalledWith('/cases/case-1/saved');
+    expect(mockGet).toHaveBeenCalledWith('/saved-cases/case-1/saved');
   });
 
   it('checkSaved debería detectar no guardado', async () => {

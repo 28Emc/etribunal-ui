@@ -10,7 +10,7 @@ import { mapDbCaseToCase } from '@shared/utils/caseMapper';
 import { useToast } from '@components/ui/Toast';
 
 export function JoinCasePage() {
-  const { id, username, slug } = useParams<{ id?: string; username?: string; slug?: string }>();
+  const { id } = useParams<{ id?: string }>();
   const navigate = useNavigate();
   const { t } = useTranslation();
   const { addToast } = useToast();
@@ -20,16 +20,11 @@ export function JoinCasePage() {
   const [isLoading, setIsLoading] = useState(true);
 
   const fetchCase = async () => {
-    const caseIdentifier = id || (username && slug ? `${username}/${slug}` : undefined);
-    if (!caseIdentifier) return;
+    if (!id) return;
 
     setIsLoading(true);
     try {
-      const data = await apiClient.get<any>(
-        id 
-          ? `/cases/${id}` 
-          : `/cases/slug/${encodeURIComponent(username!)}/${encodeURIComponent(slug!)}`
-      );
+      const data = await apiClient.get<any>(`/cases/${id}`);
       if (data) {
         setCaseData(mapDbCaseToCase(data));
         setInviteToken(data.invite_token || data.id);
@@ -43,7 +38,7 @@ export function JoinCasePage() {
 
   useEffect(() => {
     fetchCase();
-  }, [id, username, slug]);
+  }, [id]);
 
   const handleSubmitResponse = async (story: string, images: string[], isAnonymous: boolean) => {
     if (!inviteToken || !story.trim()) return;

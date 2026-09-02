@@ -89,6 +89,7 @@ export const initializeAuth = createAsyncThunk(
           email: apiUser.email || '',
           avatar:
             apiUser.avatar_url ||
+            apiUser.avatarUrl ||
             apiUser.avatar ||
             `https://picsum.photos/seed/${apiUser.id}/200`,
           hasPassword:
@@ -142,7 +143,7 @@ export const initializeAuth = createAsyncThunk(
               username: apiUser.username || user.username,
               email: apiUser.email || user.email,
               avatar:
-                apiUser.avatar_url || apiUser.avatar || user.avatar,
+                apiUser.avatar_url || apiUser.avatarUrl || apiUser.avatar || user.avatar,
               votes: apiUser.votes || user.votes || {},
               hasPassword:
                 apiUser.hasPassword !== undefined
@@ -249,6 +250,7 @@ export const updateProfile = createAsyncThunk(
         email: updatedApiUser.email || currentUser.email,
         avatar:
           updatedApiUser.avatar_url ||
+          updatedApiUser.avatarUrl ||
           updatedApiUser.avatar ||
           currentUser.avatar,
         bio:

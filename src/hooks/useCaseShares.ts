@@ -39,7 +39,7 @@ export function useCaseShares(): UseCaseSharesReturn {
     setIsLoading(true);
     try {
       const data = await apiClient.get(
-        `/cases/shared?skip=${skip}&take=${take}`
+        `/saved-cases/shared?skip=${skip}&take=${take}`
       ) as any;
       setSharedCases(data.cases);
       setTotal(data.total);
@@ -56,15 +56,15 @@ export function useCaseShares(): UseCaseSharesReturn {
     setIsLoading(true);
     try {
       const data = await apiClient.post(
-        `/cases/${caseId}/share`,
+        `/saved-cases/${caseId}/share`,
         {}
       ) as any;
       
       const shared = data.shared ?? data.is_shared ?? data.isShared;
       setIsShared(shared);
       
-      if (shared && (data.case || data.sharedCase)) {
-        const mappedCase = data.case || data.sharedCase;
+      if (shared && (data.caseResponse || data.case || data.sharedCase)) {
+        const mappedCase = data.caseResponse || data.case || data.sharedCase;
         setSharedCases(prev => [mappedCase, ...prev]);
         setTotal(prev => prev + 1);
       } else {
@@ -84,7 +84,7 @@ export function useCaseShares(): UseCaseSharesReturn {
     if (!authStorage.isAuthenticated()) return;
 
     try {
-      const data = await apiClient.get(`/cases/${caseId}/shared`) as any;
+      const data = await apiClient.get(`/saved-cases/${caseId}/shared`) as any;
       setIsShared(data.shared);
     } catch (error) {
       console.error('Error checking shared status:', error);
@@ -93,7 +93,7 @@ export function useCaseShares(): UseCaseSharesReturn {
 
   const getShareCount = useCallback(async (caseId: string) => {
     try {
-      const data = await apiClient.get(`/cases/${caseId}/shares`) as any;
+      const data = await apiClient.get(`/saved-cases/${caseId}/shares`) as any;
       return data.shares || 0;
     } catch (error) {
       console.error('Error getting share count:', error);
