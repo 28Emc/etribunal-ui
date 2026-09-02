@@ -26,26 +26,26 @@ Migrado desde el proyecto existente en veredixo.com a una arquitectura Redux + A
 ## ⚡ Comandos
 
 ```bash
-npm install            # Instalar dependencias
-npm run dev            # Desarrollo → http://localhost:3000
-npm run build          # Build producción (dist/) + sitemap
-npm run preview        # Servir el build localmente
-npm run lint           # Type check (tsc -b)
-npm run test           # Vitest en modo watch
-npx vitest run         # Vitest single run (CI)
-npm run test:coverage  # Cobertura (umbrales: 75% lines/functions/branches/statements)
+pnpm install          # Instalar dependencias (pnpm es el gestor del proyecto)
+pnpm run dev          # Desarrollo → http://localhost:3000
+pnpm run build        # Build producción (dist/) + sitemap
+pnpm run preview      # Servir el build localmente
+pnpm run lint         # Type check (tsc -b)
+pnpm run test         # Vitest en modo watch
+pnpm exec vitest run  # Vitest single run (CI)
+pnpm run test:coverage  # Cobertura (umbrales: 75% lines/functions/branches/statements)
 ```
 
-> ⚠️ `npm run lint` ejecuta `tsc -b` (chequeo de tipos estricto), no ESLint.
+> ⚠️ `pnpm run lint` ejecuta `tsc -b` (chequeo de tipos estricto), no ESLint.
 
 ## 🔧 Variables de Entorno
 
-Crear un archivo `.env` en la raíz:
+Crear un archivo `.env` en la raíz (ver `.env.example`):
 
 ```env
-VITE_API_URL="http://localhost:3001/api"   # URL del backend NestJS
+VITE_API_URL="http://localhost:8080/api"   # URL del API Gateway Spring (NUNCA el legacy NestJS :3001)
 VITE_APP_URL="http://localhost:3000"       # URL pública (SEO, shares, deep links)
-VITE_ENABLE_TRANSLATIONS="true"            # Feature flag: botones de traducción (false en prod)
+VITE_ENABLE_TRANSLATIONS="false"           # Feature flag: botones de traducción (false en prod)
 ```
 
 Todas tienen default razonable si se omiten.
@@ -166,7 +166,7 @@ Los guards de auth son manuales por página (no hay `ProtectedRoute` global). La
 
 - **Vitest 4** + happy-dom + Testing Library (`*.spec.tsx` junto al código).
 - Setup global en `src/setupTests.ts`.
-- Cobertura con umbrales mínimos del 75% (`npm run test:coverage`).
+- Cobertura con umbrales mínimos del 75% (`pnpm run test:coverage`).
 
 ```bash
 npx vitest run                # toda la suite
