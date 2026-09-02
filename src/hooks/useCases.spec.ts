@@ -21,7 +21,7 @@ const mockMapDbCaseToCase = vi.fn((c: any) => ({
 }));
 
 vi.mock('@shared/utils/caseMapper', () => ({
-  mapDbCaseToCase: (...args: any[]) => mockMapDbCaseToCase(...args),
+  mapDbCaseToCase: (...args: any[]) => (mockMapDbCaseToCase as (...a: any[]) => any)(...args),
 }));
 
 function makeCase(id: string, title: string) {

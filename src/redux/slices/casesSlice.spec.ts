@@ -70,10 +70,11 @@ const mockCase: Case = {
   votesB: 5,
   votesBothWrong: 2,
   createdAt: '2024-01-01T00:00:00Z',
-  sideA: { username: 'user_a', avatar: null, userId: 'u1' },
-  sideB: { username: 'user_b', avatar: null, userId: 'u2' },
+  sideA: { name: 'user_a', username: 'user_a', avatar: '', userId: 'u1', story: '', evidence: [] },
+  sideB: { name: 'user_b', username: 'user_b', avatar: '', userId: 'u2', story: '', evidence: [] },
   comments: [],
   commentsCount: 0,
+  tags: [],
 } as Case;
 
 describe('casesSlice — reducers', () => {

@@ -161,7 +161,7 @@ describe('ReactionBar', () => {
 
   it('debería sincronizar localReactions cuando cambian props', () => {
     const { rerender } = render(
-      <ReactionBar targetId="case-1" reactions={{ LIKE: 1 }} onReaction={mockOnReaction} />
+      <ReactionBar targetId="case-1" reactions={{ LIKE: 1, LOVE: 0, ANGRY: 0 }} onReaction={mockOnReaction} />
     );
     expect(screen.getByText('1')).toBeInTheDocument();
     rerender(

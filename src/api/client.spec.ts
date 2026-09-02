@@ -8,7 +8,7 @@ const shared = vi.hoisted(() => {
   s.responseSuccessHandler = null;
   s.responseErrorHandler = null;
   s.axiosPost = null;
-  return { shared: s };
+  return s;
 });
 
 vi.mock('axios', async (importOriginal) => {

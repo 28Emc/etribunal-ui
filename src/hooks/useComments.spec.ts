@@ -17,7 +17,7 @@ vi.mock('@api/client', () => ({
   },
   authStorage: {
     getUserId: vi.fn(() => 'user-123'),
-    isAuthenticated: (...args: any[]) => mockIsAuth(...args),
+    isAuthenticated: (...args: any[]) => (mockIsAuth as (...a: any[]) => any)(...args),
   },
 }));
 

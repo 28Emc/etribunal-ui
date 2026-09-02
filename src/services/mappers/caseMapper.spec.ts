@@ -225,8 +225,8 @@ describe('mapDbCommentToComment', () => {
     });
 
     expect(result.replies).toHaveLength(1);
-    expect(result.replies[0].id).toBe('reply_001');
-    expect(result.replies[0].text).toBe('Reply text');
+    expect(result.replies![0].id).toBe('reply_001');
+    expect(result.replies![0].text).toBe('Reply text');
   });
 
   it('debería manejar contentLanguage', () => {

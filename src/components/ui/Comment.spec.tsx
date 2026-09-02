@@ -26,8 +26,18 @@ vi.mock('@shared/components/ReactionBar', () => ({
     <button data-testid="reaction-bar" data-target={targetId} onClick={() => onReaction('LIKE')}>Reactions</button>,
 }));
 
+type ContentTranslationMock = {
+  translateComment: ReturnType<typeof vi.fn>;
+  showOriginal: ReturnType<typeof vi.fn>;
+  showTranslated: ReturnType<typeof vi.fn>;
+  isTranslating: boolean;
+  translatedComment: { commentId: string; content: string; sourceLanguage?: string } | null;
+  showTranslation: boolean;
+  setTranslatedComment: ReturnType<typeof vi.fn>;
+};
+
 const { mockUseContentTranslation } = vi.hoisted(() => ({
-  mockUseContentTranslation: vi.fn(() => ({
+  mockUseContentTranslation: vi.fn<() => ContentTranslationMock>(() => ({
     translateComment: vi.fn().mockResolvedValue(undefined),
     showOriginal: vi.fn(),
     showTranslated: vi.fn(),
@@ -61,7 +71,7 @@ const defaultProps = {
   onLike: vi.fn(),
 };
 
-const defaultTranslationReturn = {
+const defaultTranslationReturn: ContentTranslationMock = {
   translateComment: vi.fn().mockResolvedValue(undefined),
   showOriginal: vi.fn(),
   showTranslated: vi.fn(),

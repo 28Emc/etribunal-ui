@@ -118,7 +118,7 @@ describe('generateShareUrl default case', () => {
 
 describe('generateShareText default case', () => {
   it('debería retornar eTribunal para type desconocido', () => {
-    const text = generateShareText({ type: 'unknown' as any });
+    const text = generateShareText({ type: 'unknown' as any, id: '0' });
     expect(text).toBe('eTribunal');
   });
 

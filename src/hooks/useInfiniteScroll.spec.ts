@@ -3,7 +3,7 @@ import { renderHook, act } from '@testing-library/react';
 import { useInfiniteScroll } from './useInfiniteScroll';
 
 vi.mock('react', async () => {
-  const actual = await vi.importActual('react');
+  const actual = await vi.importActual<typeof import('react')>('react');
   return {
     ...actual,
     useRef: (initialValue: any) => {

@@ -19,8 +19,10 @@ const mockUser: User = {
   email: 'juan@test.com',
   avatar: 'https://example.com/avatar.jpg',
   hasPassword: true,
-  role: 'user',
+  role: 'USER',
   language: 'es',
+  casesCreated: [],
+  votes: {},
 };
 
 const mocks = vi.hoisted(() => ({
@@ -183,8 +185,8 @@ describe('authSlice', () => {
             email: 'social@test.com',
             avatar_url: 'https://avatar.com/img.jpg',
             language: 'en',
-            role: 'user',
-            votes: { case1: 'side_a' },
+            role: 'USER',
+            votes: { case1: 'A' },
           })
         ) +
         '&refresh_token=refresh-123';
@@ -225,8 +227,8 @@ describe('authSlice', () => {
             email: 'social@test.com',
             avatar_url: 'https://avatar.com/img.jpg',
             language: 'es',
-            role: 'user',
-            votes: { case1: 'side_a' },
+            role: 'USER',
+            votes: { case1: 'A' },
           })
         );
       Object.defineProperty(window, 'location', {
@@ -252,7 +254,7 @@ describe('authSlice', () => {
         encodeURIComponent(
           JSON.stringify({
             id: 'social-2', name: 'NombreSinUser', email: 'nouser@test.com',
-            language: 'en', role: 'user', votes: {},
+            language: 'en', role: 'USER', votes: {},
           })
         );
       Object.defineProperty(window, 'location', {
@@ -280,7 +282,7 @@ describe('authSlice', () => {
         encodeURIComponent(
           JSON.stringify({
             id: 'social-3', username: 'noavatar', email: 'no@test.com',
-            language: 'en', role: 'user', votes: {},
+            language: 'en', role: 'USER', votes: {},
           })
         );
       Object.defineProperty(window, 'location', {
@@ -308,7 +310,7 @@ describe('authSlice', () => {
           JSON.stringify({
             id: 'social-4', username: 'hpuser', email: 'hp@test.com',
             avatar_url: 'https://img.com/a.jpg', hasPassword: false,
-            language: 'en', role: 'user', votes: {},
+            language: 'en', role: 'USER', votes: {},
           })
         );
       Object.defineProperty(window, 'location', {
@@ -350,9 +352,9 @@ describe('authSlice', () => {
         username: 'juanperez',
         email: 'juan@test.com',
         avatar_url: 'https://new-avatar.jpg',
-        votes: { case1: 'side_a' },
+        votes: { case1: 'A' },
         hasPassword: true,
-        role: 'user',
+        role: 'USER',
         language: 'es',
         is_anonymous: false,
         bio: 'Hola',
@@ -397,7 +399,7 @@ describe('authSlice', () => {
       mocks.mockApiGet.mockResolvedValue({
         id: '123', username: 'juanperez', email: 'juan@test.com',
         avatar_url: 'https://example.com/avatar.jpg', votes: {},
-        hasPassword: true, role: 'user', language: 'en',
+        hasPassword: true, role: 'USER', language: 'en',
       });
 
       const store = createStore();
@@ -412,7 +414,7 @@ describe('authSlice', () => {
       mocks.mockApiGet.mockResolvedValue({
         id: '123', username: 'juanperez', email: 'juan@test.com',
         avatar_url: 'https://example.com/avatar.jpg', votes: {},
-        hasPassword: true, role: 'user', language: 'es',
+        hasPassword: true, role: 'USER', language: 'es',
       });
 
       const store = createStore();
@@ -454,11 +456,11 @@ describe('authSlice', () => {
       expect(state.user!.name).toBe('Juan');
       expect(state.user!.email).toBe('juan@test.com');
       expect(state.user!.username).toBe('juanperez');
-      expect(state.user!.role).toBe('user');
+      expect(state.user!.role).toBe('USER');
     });
 
     it('debería restaurar con fallbacks cuando API falta avatar/username/votes', async () => {
-      const userNoFields: User = { ...mockUser, avatar: 'https://old-avatar.jpg', votes: { c1: 'side_a' } };
+      const userNoFields: User = { ...mockUser, avatar: 'https://old-avatar.jpg', votes: { c1: 'A' } };
       localStorage.setItem('etribunal_user', JSON.stringify(userNoFields));
       mocks.mockGetUserId.mockReturnValue('123');
       mocks.mockApiGet.mockResolvedValue({
@@ -470,7 +472,7 @@ describe('authSlice', () => {
       const state = store.getState().auth;
       expect(state.user!.username).toBe('newuser');
       expect(state.user!.avatar).toBe('https://old-avatar.jpg');
-      expect(state.user!.votes).toEqual({ c1: 'side_a' });
+      expect(state.user!.votes).toEqual({ c1: 'A' });
     });
 
     it('debería restaurar sesión con username desde apiUser.name si no hay username', async () => {
@@ -478,7 +480,7 @@ describe('authSlice', () => {
       mocks.mockGetUserId.mockReturnValue('123');
       mocks.mockApiGet.mockResolvedValue({
         id: '123', name: 'nombreSinUser', email: 'nuevo@test.com',
-        avatar_url: 'https://img.com/a.jpg', hasPassword: true, role: 'user', language: 'es', votes: {},
+        avatar_url: 'https://img.com/a.jpg', hasPassword: true, role: 'USER', language: 'es', votes: {},
       });
 
       const store = createStore();
