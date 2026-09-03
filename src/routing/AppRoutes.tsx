@@ -5,6 +5,8 @@ import { LoadingState } from '@components/ui/LoadingState';
 import { useAuth } from '@context/AuthContext';
 import { consumeInviteDeepLink } from '@pages/InvitePage';
 import { FeedPage } from '@pages/FeedPage';
+import { AUTOMATION_ADMIN_ROLES } from '@hooks/useAutomation';
+import type { User } from '@typings/index';
 
 const CaseDetailPage = lazy(() => import('@pages/CaseDetailPage').then(m => ({ default: m.CaseDetailPage })));
 const CreateCasePage = lazy(() => import('@pages/CreateCasePage').then(m => ({ default: m.CreateCasePage })));
@@ -21,10 +23,28 @@ const TermsAndConditionsPage = lazy(() => import('@pages/legal/TermsAndCondition
 const PrivacyPolicyPage = lazy(() => import('@pages/legal/PrivacyPolicyPage').then(m => ({ default: m.PrivacyPolicyPage })));
 const CommunityGuidelinesPage = lazy(() => import('@pages/legal/CommunityGuidelinesPage').then(m => ({ default: m.CommunityGuidelinesPage })));
 const AboutPage = lazy(() => import('@pages/legal/AboutPage').then(m => ({ default: m.AboutPage })));
+const AutomationPage = lazy(() => import('@pages/automation/AutomationPage').then(m => ({ default: m.AutomationPage })));
 
 const L = ({ children }: { children: React.ReactNode }) => (
   <Suspense fallback={<LoadingState />}>{children}</Suspense>
 );
+
+type Role = User['role'];
+
+function RoleGate({
+  roles,
+  children,
+}: {
+  roles: Role[];
+  children: React.ReactNode;
+}) {
+  const { currentUser, isLoading } = useAuth();
+  if (isLoading) return <LoadingState />;
+  if (!currentUser || !roles.includes(currentUser.role)) {
+    return <Navigate to="/" replace />;
+  }
+  return <>{children}</>;
+}
 
 const DEEP_LINK_KEY = 'etribunal_deep_link';
 
@@ -94,6 +114,7 @@ export default function AppRoutes() {
       <Route path="/legal/privacy" element={<MainLayout><L><PrivacyPolicyPage /></L></MainLayout>} />
       <Route path="/legal/guidelines" element={<MainLayout><L><CommunityGuidelinesPage /></L></MainLayout>} />
       <Route path="/legal/about" element={<MainLayout><L><AboutPage /></L></MainLayout>} />
+      <Route path="/admin/motor-ia" element={<MainLayout><RoleGate roles={AUTOMATION_ADMIN_ROLES}><L><AutomationPage /></L></RoleGate></MainLayout>} />
       <Route path="/*" element={<Navigate to="/" replace />} />
     </Routes>
   );

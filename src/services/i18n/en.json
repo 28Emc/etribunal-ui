@@ -727,5 +727,96 @@
     "deleteSubmit": "Delete Case",
     "deleteSuccess": "Case deleted successfully",
     "deleteError": "Error deleting case"
+  },
+  "automation": {
+    "title": "AI Engine",
+    "subtitle": "Daily activity automation with AI",
+    "accessDenied": "You don't have permission to access this section.",
+    "refresh": "Refresh",
+    "kpis": "Key metrics",
+    "actions": "Actions",
+    "config": "Business configuration",
+    "engagement": "AI case engagement",
+    "queue": "Interaction queue",
+    "history": "Run history",
+    "runDetail": "Run detail",
+    "runNow": "Run now",
+    "runDry": "Run (Dry run)",
+    "configure": "Configure",
+    "save": "Save changes",
+    "noRuns": "No runs registered yet.",
+    "noEngagement": "No evaluated cases yet.",
+    "enabled": "Engine enabled",
+    "dryRun": "Dry run (doesn't create content)",
+    "activityWeighted": "Activity-weighted scheduling",
+    "engagementEnabled": "Engagement feedback enabled",
+    "runHour": "Daily run hour",
+    "dailyCasesMin": "Min cases per day",
+    "dailyCasesMax": "Max cases per day",
+    "usersPerCaseMin": "Min users per case",
+    "usersPerCaseMax": "Max users per case",
+    "schedulingIntervalMin": "Min interval between interactions (min)",
+    "schedulingIntervalMax": "Max interval between interactions (min)",
+    "schedulingWindowHours": "Max hours to complete the day",
+    "intensityMin": "Min intensity",
+    "intensityMax": "Max intensity",
+    "dailyPoolSize": "Daily user pool",
+    "rssFeedUrls": "RSS feed URLs (one per line)",
+    "kpi": {
+      "casesCreated": "Cases created",
+      "casesCreatedHint": "Total across recent runs",
+      "totalInteractions": "Interactions in queue",
+      "queueHint": "Scheduled + processing",
+      "avgScore": "Average score",
+      "evaluated": "evaluated",
+      "noData": "No data",
+      "runs": "Runs executed",
+      "completed": "completed"
+    },
+    "metrics": {
+      "votes": "votes",
+      "comments": "comments",
+      "reactions": "reactions",
+      "shares": "shares",
+      "score": "score",
+      "cases": "cases",
+      "casesRequested": "Cases requested",
+      "casesCreated": "Cases created",
+      "casesFailed": "Cases failed",
+      "startedAt": "Started",
+      "finishedAt": "Finished"
+    },
+    "queue": {
+      "scheduled": "Scheduled",
+      "processing": "Processing",
+      "completedToday": "Completed today",
+      "failedToday": "Failed today"
+    },
+    "runs": {
+      "status": {
+        "status": "Status",
+        "PENDING": "Pending",
+        "RUNNING": "Running",
+        "COMPLETED": "Completed",
+        "PARTIAL": "Partial",
+        "FAILED": "Failed",
+        "CANCELLED": "Cancelled"
+      }
+    },
+    "toasts": {
+      "noChanges": "No changes to save.",
+      "saved": "Configuration saved.",
+      "runTriggered": "Run triggered successfully.",
+      "runTriggeredDry": "Dry run triggered successfully."
+    },
+    "errors": {
+      "settingsLoad": "Could not load settings.",
+      "settingsSave": "Could not save settings.",
+      "runsLoad": "Could not load run history.",
+      "runDetailLoad": "Could not load run detail.",
+      "queueLoad": "Could not load queue.",
+      "engagementLoad": "Could not load engagement.",
+      "runTrigger": "Could not trigger the run."
+    }
   }
 }

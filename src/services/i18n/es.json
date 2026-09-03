@@ -716,5 +716,96 @@
     "deleteSubmit": "Eliminar Caso",
     "deleteSuccess": "Caso eliminado exitosamente",
     "deleteError": "Error al eliminar el caso"
+  },
+  "automation": {
+    "title": "Motor de IA",
+    "subtitle": "Automatización de actividad diaria con IA",
+    "accessDenied": "No tienes permisos para acceder a esta sección.",
+    "refresh": "Refrescar",
+    "kpis": "Métricas clave",
+    "actions": "Acciones",
+    "config": "Configuración de negocio",
+    "engagement": "Engagement de casos IA",
+    "queue": "Cola de interacciones",
+    "history": "Historial de runs",
+    "runDetail": "Detalle del run",
+    "runNow": "Ejecutar run",
+    "runDry": "Ejecutar (Dry run)",
+    "configure": "Configurar",
+    "save": "Guardar cambios",
+    "noRuns": "No hay runs registrados todavía.",
+    "noEngagement": "No hay casos evaluados todavía.",
+    "enabled": "Motor activado",
+    "dryRun": "Dry run (no crea contenido)",
+    "activityWeighted": "Scheduling ponderado por actividad",
+    "engagementEnabled": "Feedback de engagement habilitado",
+    "runHour": "Hora de ejecución diaria",
+    "dailyCasesMin": "Casos mínimos por día",
+    "dailyCasesMax": "Casos máximos por día",
+    "usersPerCaseMin": "Usuarios mínimos por caso",
+    "usersPerCaseMax": "Usuarios máximos por caso",
+    "schedulingIntervalMin": "Intervalo mínimo entre interacciones (min)",
+    "schedulingIntervalMax": "Intervalo máximo entre interacciones (min)",
+    "schedulingWindowHours": "Horas máximas para completar el día",
+    "intensityMin": "Intensidad mínima",
+    "intensityMax": "Intensidad máxima",
+    "dailyPoolSize": "Pool diario de usuarios",
+    "rssFeedUrls": "URLs de feeds RSS (una por línea)",
+    "kpi": {
+      "casesCreated": "Casos creados",
+      "casesCreatedHint": "Total en runs recientes",
+      "totalInteractions": "Interacciones en cola",
+      "queueHint": "Scheduled + processing",
+      "avgScore": "Score promedio",
+      "evaluated": "evaluados",
+      "noData": "Sin datos",
+      "runs": "Runs ejecutados",
+      "completed": "completados"
+    },
+    "metrics": {
+      "votes": "votos",
+      "comments": "comentarios",
+      "reactions": "reacciones",
+      "shares": "shares",
+      "score": "score",
+      "cases": "casos",
+      "casesRequested": "Casos solicitados",
+      "casesCreated": "Casos creados",
+      "casesFailed": "Casos fallidos",
+      "startedAt": "Inicio",
+      "finishedAt": "Fin"
+    },
+    "queue": {
+      "scheduled": "Programadas",
+      "processing": "Procesando",
+      "completedToday": "Completadas hoy",
+      "failedToday": "Fallidas hoy"
+    },
+    "runs": {
+      "status": {
+        "status": "Estado",
+        "PENDING": "Pendiente",
+        "RUNNING": "En ejecución",
+        "COMPLETED": "Completado",
+        "PARTIAL": "Parcial",
+        "FAILED": "Fallido",
+        "CANCELLED": "Cancelado"
+      }
+    },
+    "toasts": {
+      "noChanges": "No hay cambios que guardar.",
+      "saved": "Configuración guardada.",
+      "runTriggered": "Run disparado exitosamente.",
+      "runTriggeredDry": "Run (dry) disparado exitosamente."
+    },
+    "errors": {
+      "settingsLoad": "No se pudieron cargar los ajustes.",
+      "settingsSave": "No se pudieron guardar los ajustes.",
+      "runsLoad": "No se pudo cargar el historial de runs.",
+      "runDetailLoad": "No se pudo cargar el detalle del run.",
+      "queueLoad": "No se pudo cargar la cola.",
+      "engagementLoad": "No se pudo cargar el engagement.",
+      "runTrigger": "No se pudo disparar el run."
+    }
   }
 }
