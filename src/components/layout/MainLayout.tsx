@@ -1,11 +1,12 @@
 import React, { useState, useEffect, Suspense, lazy } from 'react';
 import { useNavigate, Link, useLocation } from 'react-router-dom';
-import { Gavel, Search, Bell, User as UserIcon, Globe, ChevronDown, ChevronLeft, Check, Menu, X, Home, TrendingUp, Settings, Plus, Loader2, Sun, Moon, FileText, Shield, BookOpen, Info } from 'lucide-react';
+import { Gavel, Search, Bell, User as UserIcon, Globe, ChevronDown, ChevronLeft, Check, Menu, X, Home, TrendingUp, Settings, Plus, Loader2, Sun, Moon, FileText, Shield, BookOpen, Info, Cpu } from 'lucide-react';
 import { apiClient, authStorage } from '@api/client';
 import { useTranslation } from 'react-i18next';
 import { Sidebar } from './Sidebar';
 import { TrendingSidebar } from './TrendingSidebar';
 import { useAuth } from '@context/AuthContext';
+import { AUTOMATION_ADMIN_ROLES } from '@hooks/useAutomation';
 import { useNotifications } from '@features/cases/hooks/useNotifications';
 import { useSearch } from '@shared/hooks/useSearch';
 import { Tooltip } from '@shared/components/Tooltip';
@@ -26,6 +27,7 @@ export function MainLayout({ children, activeTab = 'for_you' }: MainLayoutProps)
   const { t, i18n } = useTranslation();
   const navigate = useNavigate();
   const { currentUser } = useAuth();
+  const isAdmin = !!currentUser && AUTOMATION_ADMIN_ROLES.includes(currentUser.role);
 
   const {
     notifications,
@@ -326,7 +328,7 @@ export function MainLayout({ children, activeTab = 'for_you' }: MainLayoutProps)
 
       <div className="flex-1 flex w-full max-w-[1440px] mx-auto relative overflow-hidden pt-16 md:pt-18">
         <div className="hidden lg:flex flex-col h-full overflow-x-hidden overflow-y-auto no-scrollbar">
-          <Sidebar activeTab={activeTab} onTabChange={(tab) => navigate(tab === 'for_you' ? '/' : `/cases/${tab}`)} onProfileClick={() => currentUser ? navigate(`/users/${currentUser.username || currentUser.name}`) : navigate('/login')} onCreateClick={() => currentUser ? navigate('/create') : navigate('/login')} onSettingsClick={() => currentUser ? navigate('/settings') : navigate('/login')}           userAvatar={currentUser?.avatar ?? undefined} />
+          <Sidebar activeTab={activeTab} onTabChange={(tab) => navigate(tab === 'for_you' ? '/' : `/cases/${tab}`)} onProfileClick={() => currentUser ? navigate(`/users/${currentUser.username || currentUser.name}`) : navigate('/login')} onCreateClick={() => currentUser ? navigate('/create') : navigate('/login')} onSettingsClick={() => currentUser ? navigate('/settings') : navigate('/login')} onAutomationClick={() => currentUser ? navigate('/admin/motor-ia') : navigate('/login')} isAdmin={isAdmin} userAvatar={currentUser?.avatar ?? undefined} />
         </div>
 
         <div className={cn("flex-1 flex flex-col h-full relative mx-auto overflow-y-auto no-scrollbar transition-all duration-500 pt-4 md:pt-6 lg:pt-8 px-2 md:px-4")}>
@@ -459,6 +461,12 @@ export function MainLayout({ children, activeTab = 'for_you' }: MainLayoutProps)
                   <div>
                     <div className="text-[10px] font-black uppercase tracking-widest text-text-muted mb-2 px-4">{t('layout.account')}</div>
                     <nav className="space-y-1 rounded-2xl">
+                      {isAdmin && (
+                        <Link to="/admin/motor-ia" onClick={() => setShowSidebar(false)} className="flex items-center gap-4 px-4 py-3 rounded-2xl text-text-muted hover:bg-border-main/5 hover:text-text-main transition-all">
+                          <Cpu className="w-5 h-5" />
+                          <span className="text-sm font-black uppercase tracking-widest">{t('automation.title')}</span>
+                        </Link>
+                      )}
                       <Link to="/settings" onClick={() => setShowSidebar(false)} className="flex items-center gap-4 px-4 py-3 rounded-2xl text-text-muted hover:bg-border-main/5 hover:text-text-main transition-all">
                         <Settings className="w-5 h-5" />
                         <span className="text-sm font-black uppercase tracking-widest">{t('layout.settings')}</span>
