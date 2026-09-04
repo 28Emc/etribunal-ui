@@ -1,11 +1,11 @@
 import { lazy, Suspense, useEffect } from 'react';
 import { Routes, Route, Navigate, useLocation, useNavigate } from 'react-router-dom';
 import { MainLayout } from '@layout/MainLayout';
+import { AdminLayout } from '@layout/AdminLayout';
 import { LoadingState } from '@components/ui/LoadingState';
 import { useAuth } from '@context/AuthContext';
 import { consumeInviteDeepLink } from '@pages/InvitePage';
 import { FeedPage } from '@pages/FeedPage';
-import { AUTOMATION_ADMIN_ROLES } from '@hooks/useAutomation';
 import type { User } from '@typings/index';
 
 const CaseDetailPage = lazy(() => import('@pages/CaseDetailPage').then(m => ({ default: m.CaseDetailPage })));
@@ -114,7 +114,9 @@ export default function AppRoutes() {
       <Route path="/legal/privacy" element={<MainLayout><L><PrivacyPolicyPage /></L></MainLayout>} />
       <Route path="/legal/guidelines" element={<MainLayout><L><CommunityGuidelinesPage /></L></MainLayout>} />
       <Route path="/legal/about" element={<MainLayout><L><AboutPage /></L></MainLayout>} />
-      <Route path="/admin/motor-ia" element={<MainLayout><RoleGate roles={AUTOMATION_ADMIN_ROLES}><L><AutomationPage /></L></RoleGate></MainLayout>} />
+      <Route element={<AdminLayout />}>
+        <Route path="/admin/motor-ia" element={<L><AutomationPage /></L>} />
+      </Route>
       <Route path="/*" element={<Navigate to="/" replace />} />
     </Routes>
   );

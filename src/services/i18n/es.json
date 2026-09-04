@@ -726,7 +726,7 @@
     "actions": "Acciones",
     "config": "Configuración de negocio",
     "engagement": "Engagement de casos IA",
-    "queue": "Cola de interacciones",
+    "queueTitle": "Cola de interacciones",
     "history": "Historial de runs",
     "runDetail": "Detalle del run",
     "runNow": "Ejecutar run",
@@ -775,7 +775,7 @@
       "startedAt": "Inicio",
       "finishedAt": "Fin"
     },
-    "queue": {
+    "queueMetrics": {
       "scheduled": "Programadas",
       "processing": "Procesando",
       "completedToday": "Completadas hoy",
@@ -807,5 +807,26 @@
       "engagementLoad": "No se pudo cargar el engagement.",
       "runTrigger": "No se pudo disparar el run."
     }
+  },
+  "admin": {
+    "header": {
+      "admin": "Admin"
+    },
+    "sidebar": {
+      "title": "PANEL ADMIN",
+      "open": "Abrir menú",
+      "collapse": "Colapsar",
+      "expand": "Expandir",
+      "navigation": "Navegación admin",
+      "version": "v1.0.0"
+    },
+    "userMenu": {
+      "profile": "Mi perfil",
+      "logout": "Cerrar sesión"
+    },
+    "users": "Usuarios",
+    "moderation": "Moderación",
+    "analytics": "Analytics",
+    "settings": "Configuración"
   }
 }

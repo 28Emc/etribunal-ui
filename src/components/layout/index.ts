@@ -1,6 +1,9 @@
 export { Sidebar } from './Sidebar';
 export { TrendingSidebar } from './TrendingSidebar';
 export { MainLayout } from './MainLayout';
+export { AdminLayout } from './AdminLayout';
+export { AdminSidebar } from './AdminSidebar';
+export { AdminHeader } from './AdminHeader';
 export { PageLayout } from './PageLayout';
 export { CategoryFilter } from './CategoryFilter';
 export { TopJudgesList } from './TopJudgesList';

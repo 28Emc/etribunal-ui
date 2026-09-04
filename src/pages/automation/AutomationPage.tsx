@@ -494,30 +494,30 @@ export const AutomationPage: React.FC = () => {
 
             {/* Queue */}
             <section>
-              <SectionTitle>{t('automation.queue')}</SectionTitle>
+              <SectionTitle>{t('automation.queueTitle')}</SectionTitle>
               {isLoadingQueue && !queue ? (
                 <LoadingState />
               ) : (
                 <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
                   <KpiCard
                     icon={Clock}
-                    label={t('automation.queue.scheduled')}
+                    label={t('automation.queueMetrics.scheduled')}
                     value={queue?.scheduled ?? 0}
                   />
                   <KpiCard
                     icon={Activity}
-                    label={t('automation.queue.processing')}
+                    label={t('automation.queueMetrics.processing')}
                     value={queue?.processing ?? 0}
                   />
                   <KpiCard
                     icon={Check}
-                    label={t('automation.queue.completedToday')}
+                    label={t('automation.queueMetrics.completedToday')}
                     value={queue?.completedToday ?? 0}
                     tone="success"
                   />
                   <KpiCard
                     icon={X}
-                    label={t('automation.queue.failedToday')}
+                    label={t('automation.queueMetrics.failedToday')}
                     value={queue?.failedToday ?? 0}
                     tone="warning"
                   />

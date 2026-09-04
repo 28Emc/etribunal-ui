@@ -1,7 +1,7 @@
 import React from 'react';
 import { useTranslation } from 'react-i18next';
 import { useNavigate, useLocation } from 'react-router-dom';
-import { Home, Plus, User, Settings, TrendingUp, Cpu } from 'lucide-react';
+import { Home, Plus, User, Settings, TrendingUp } from 'lucide-react';
 import { cn } from '@utils/helpers';
 
 interface SidebarProps {
@@ -10,8 +10,6 @@ interface SidebarProps {
   onProfileClick: () => void;
   onCreateClick: () => void;
   onSettingsClick: () => void;
-  onAutomationClick: () => void;
-  isAdmin?: boolean;
   userAvatar?: string;
 }
 
@@ -27,8 +25,6 @@ export const Sidebar = ({
   onProfileClick,
   onCreateClick,
   onSettingsClick,
-  onAutomationClick,
-  isAdmin = false,
   userAvatar
 }: SidebarProps) => {
   const { t } = useTranslation();
@@ -84,16 +80,6 @@ export const Sidebar = ({
           <Plus className="w-6 h-6" />
           <span>{t('layout.newCase')}</span>
         </button>
-
-        {isAdmin && (
-          <button
-            onClick={onAutomationClick}
-            className="flex items-center gap-4 px-4 py-4 rounded-2xl text-text-muted hover:bg-border-main/5 hover:text-text-main transition-all group"
-          >
-            <Cpu className="w-6 h-6 group-hover:text-sky-400 transition-colors" />
-            <span className="text-sm font-black uppercase tracking-widest italic">{t('automation.title')}</span>
-          </button>
-        )}
 
         <button
           onClick={onSettingsClick}

@@ -737,7 +737,7 @@
     "actions": "Actions",
     "config": "Business configuration",
     "engagement": "AI case engagement",
-    "queue": "Interaction queue",
+    "queueTitle": "Interaction queue",
     "history": "Run history",
     "runDetail": "Run detail",
     "runNow": "Run now",
@@ -786,7 +786,7 @@
       "startedAt": "Started",
       "finishedAt": "Finished"
     },
-    "queue": {
+    "queueMetrics": {
       "scheduled": "Scheduled",
       "processing": "Processing",
       "completedToday": "Completed today",
@@ -818,5 +818,26 @@
       "engagementLoad": "Could not load engagement.",
       "runTrigger": "Could not trigger the run."
     }
+  },
+  "admin": {
+    "header": {
+      "admin": "Admin"
+    },
+    "sidebar": {
+      "title": "ADMIN PANEL",
+      "open": "Open menu",
+      "collapse": "Collapse",
+      "expand": "Expand",
+      "navigation": "Admin navigation",
+      "version": "v1.0.0"
+    },
+    "userMenu": {
+      "profile": "My profile",
+      "logout": "Log out"
+    },
+    "users": "Users",
+    "moderation": "Moderation",
+    "analytics": "Analytics",
+    "settings": "Settings"
   }
 }
