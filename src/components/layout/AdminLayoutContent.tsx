@@ -136,6 +136,23 @@ export const AdminLayoutContent = ({ collapsed, onCollapseChange, location }: Ad
             buttonContent
           );
         })}
+        <div className="border-t border-border-main/10 my-2" />
+        <button
+          onClick={() => navigate('/')}
+          className={cn(
+            'w-full flex items-center gap-4 px-3 py-3 rounded-xl transition-all group',
+            'text-text-muted hover:bg-border-main/5 hover:text-text-main',
+            collapsed && 'justify-center'
+          )}
+        >
+          <RotateCcw className="w-5 h-5 flex-shrink-0 transition-transform group-hover:scale-110" />
+          {!collapsed && (
+            <span className="text-sm font-black uppercase tracking-widest italic truncate">
+              {t('admin.sidebar.backToFeed')}
+            </span>
+          )}
+        </button>
+
       </nav>
 
       <div className="p-4 border-t border-border-main/10">
