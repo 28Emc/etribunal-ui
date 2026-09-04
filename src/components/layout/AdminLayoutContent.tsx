@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { useTranslation } from 'react-i18next';
 import { useNavigate, useLocation, Outlet, type Location, Link } from 'react-router-dom';
-import { Cpu, Users, Shield, BarChart, Settings, ChevronLeft, ChevronRight, Menu, X } from 'lucide-react';
+import { Cpu, Users, Shield, BarChart, Settings, ChevronLeft, ChevronRight, Menu, X, RotateCcw } from 'lucide-react';
 import { cn } from '@utils/helpers';
 import { Tooltip } from '@shared/components/Tooltip';
 import { motion, AnimatePresence } from 'motion/react';
@@ -9,11 +9,11 @@ import { AdminHeader } from './AdminHeader';
 import { createPortal } from 'react-dom';
 
 const ADMIN_NAV = [
-  { id: 'motor-ia', icon: Cpu, labelKey: 'automation.title', path: '/admin/motor-ia' },
-  { id: 'users', icon: Users, labelKey: 'admin.users', path: '/admin/users' },
-  { id: 'moderation', icon: Shield, labelKey: 'admin.moderation', path: '/admin/moderation' },
-  { id: 'analytics', icon: BarChart, labelKey: 'admin.analytics', path: '/admin/analytics' },
-  { id: 'settings', icon: Settings, labelKey: 'admin.settings', path: '/admin/settings' },
+  { id: 'motor-ia', icon: Cpu, labelKey: 'automation.title', path: '/admin/motor-ia', disabled: false },
+  { id: 'users', icon: Users, labelKey: 'admin.users', path: '/admin/users', disabled: true },
+  { id: 'moderation', icon: Shield, labelKey: 'admin.moderation', path: '/admin/moderation', disabled: true },
+  { id: 'analytics', icon: BarChart, labelKey: 'admin.analytics', path: '/admin/analytics', disabled: true },
+  { id: 'settings', icon: Settings, labelKey: 'admin.settings', path: '/admin/settings', disabled: true },
 ] as const;
 
 interface AdminLayoutContentProps {
@@ -96,24 +96,30 @@ export const AdminLayoutContent = ({ collapsed, onCollapseChange, location }: Ad
         )}
       </div>
 
-      <nav className="flex-1 overflow-y-auto py-4 px-2">
+      <nav className="flex-1 overflow-y-auto py-4 px-2 subtle-scrollbar">
         {ADMIN_NAV.map((item) => {
           const active = isActive(item.path);
           const Icon = item.icon;
           const label = t(item.labelKey);
           const buttonContent = (
             <button
-              onClick={() => navigate(item.path)}
+              onClick={() => {
+                if (!item.disabled) navigate(item.path);
+              }}
+              disabled={item.disabled}
               className={cn(
                 'w-full flex items-center gap-4 px-3 py-3 rounded-xl transition-all group',
                 active
                   ? 'bg-primary/10 text-primary'
+                  : item.disabled
+                  ? 'text-text-muted/40 cursor-not-allowed'
                   : 'text-text-muted hover:bg-border-main/5 hover:text-text-main',
                 collapsed && 'justify-center'
               )}
               aria-current={active ? 'page' : undefined}
+              aria-disabled={item.disabled}
             >
-              <Icon className={cn('w-5 h-5 flex-shrink-0 transition-transform group-hover:scale-110', active && 'text-primary')} />
+              <Icon className={cn('w-5 h-5 flex-shrink-0 transition-transform group-hover:scale-110', active && 'text-primary', item.disabled && 'opacity-40')} />
               {!collapsed && (
                 <span className="text-sm font-black uppercase tracking-widest italic truncate">
                   {label}
@@ -130,6 +136,22 @@ export const AdminLayoutContent = ({ collapsed, onCollapseChange, location }: Ad
             buttonContent
           );
         })}
+        <div className="border-t border-border-main/10 my-2" />
+        <button
+          onClick={() => navigate('/')}
+          className={cn(
+            'w-full flex items-center gap-4 px-3 py-3 rounded-xl transition-all group',
+            'text-text-muted hover:bg-border-main/5 hover:text-text-main',
+            collapsed && 'justify-center'
+          )}
+        >
+          <RotateCcw className="w-5 h-5 flex-shrink-0 transition-transform group-hover:scale-110" />
+          {!collapsed && (
+            <span className="text-sm font-black uppercase tracking-widest italic truncate">
+              {t('admin.sidebar.backToFeed')}
+            </span>
+          )}
+        </button>
       </nav>
 
       <div className="p-4 border-t border-border-main/10">
@@ -186,24 +208,44 @@ export const AdminLayoutContent = ({ collapsed, onCollapseChange, location }: Ad
                   <button
                     key={item.id}
                     onClick={() => {
-                      navigate(item.path);
+                      if (!item.disabled) navigate(item.path);
                       setMobileOpen(false);
                     }}
+                    disabled={item.disabled}
                     className={cn(
                       'w-full flex items-center gap-4 px-3 py-3 rounded-xl transition-all group',
                       active
                         ? 'bg-primary/10 text-primary'
+                        : item.disabled
+                        ? 'text-text-muted/40 cursor-not-allowed'
                         : 'text-text-muted hover:bg-border-main/5 hover:text-text-main'
                     )}
                     aria-current={active ? 'page' : undefined}
+                    aria-disabled={item.disabled}
                   >
-                    <Icon className={cn('w-5 h-5 flex-shrink-0 transition-transform group-hover:scale-110', active && 'text-primary')} />
+                    <Icon className={cn('w-5 h-5 flex-shrink-0 transition-transform group-hover:scale-110', active && 'text-primary', item.disabled && 'opacity-40')} />
                     <span className="text-sm font-black uppercase tracking-widest italic truncate">
                       {label}
                     </span>
                   </button>
                 );
               })}
+              <div className="border-t border-border-main/10 my-2" />
+              <button
+                onClick={() => {
+                  navigate('/');
+                  setMobileOpen(false);
+                }}
+                className={cn(
+                  'w-full flex items-center gap-4 px-3 py-3 rounded-xl transition-all group',
+                  'text-text-muted hover:bg-border-main/5 hover:text-text-main'
+                )}
+              >
+                <RotateCcw className="w-5 h-5 flex-shrink-0 transition-transform group-hover:scale-110" />
+                <span className="text-sm font-black uppercase tracking-widest italic truncate">
+                  {t('admin.sidebar.backToFeed')}
+                </span>
+              </button>
             </nav>
 
             <div className="p-4 border-t border-border-main/10">

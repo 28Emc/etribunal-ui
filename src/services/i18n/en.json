@@ -829,7 +829,8 @@
       "collapse": "Collapse",
       "expand": "Expand",
       "navigation": "Admin navigation",
-      "version": "v1.0.0"
+      "version": "v1.0.0",
+      "backToFeed": "Back to feed"
     },
     "userMenu": {
       "profile": "My profile",
