@@ -62,7 +62,27 @@ export const AdminLayoutContent = ({ collapsed, onCollapseChange, location }: Ad
             className="flex items-center justify-center"
             aria-label={t('admin.sidebar.title')}
           >
-            <img src="/icons/eTribunal-isotipo.png" alt="eTribunal" className={cn('h-8 w-auto transition-opacity', collapsed && 'opacity-80 hover:opacity-100')} />
+            {/* Desktop expanded: horizontal logo */}
+            {!collapsed && (
+              <img
+                src="/icons/eTribunal-logo-horizontal.png"
+                alt="eTribunal"
+                className="hidden lg:block h-8 w-auto transition-opacity"
+              />
+            )}
+            {/* Desktop collapsed or mobile: isotipo */}
+            {(collapsed || true) && (
+              <img
+                src="/icons/eTribunal-isotipo.png"
+                alt="eTribunal"
+                className={cn(
+                  'h-8 w-auto transition-opacity',
+                  'lg:hidden', // mobile: always show isotipo
+                  collapsed && 'lg:block', // desktop collapsed: show isotipo
+                  !collapsed && 'lg:hidden' // desktop expanded: hide isotipo
+                )}
+              />
+            )}
           </Link>
         </div>
         {!collapsed && (
