@@ -22,6 +22,7 @@ export interface PageLayoutProps {
   rightButtonMenu?: React.ReactNode;
   showRightButtonMenu?: boolean;
   onCloseRightButtonMenu?: () => void;
+  showBackButton?: boolean;
 }
 
 export function PageLayout({
@@ -33,7 +34,8 @@ export function PageLayout({
   className,
   rightButtonMenu,
   showRightButtonMenu = false,
-  onCloseRightButtonMenu
+  onCloseRightButtonMenu,
+  showBackButton = true
 }: PageLayoutProps) {
   const navigate = useNavigate();
 
@@ -49,6 +51,7 @@ export function PageLayout({
 
   const renderButton = (btn?: IconButtonProps, isDefaultLeft = false) => {
     if (!btn && !isDefaultLeft) return null;
+    if (isDefaultLeft && !showBackButton) return null;
     const buttonProps = btn || defaultLeftButton;
     const Icon = buttonProps.icon;
     

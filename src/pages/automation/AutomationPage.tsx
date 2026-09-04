@@ -272,6 +272,7 @@ export const AutomationPage: React.FC = () => {
         tooltip: t('automation.refresh'),
         className: 'text-sky-400',
       }}
+      showBackButton={false}
     >
       <SEO title={t('automation.title')} />
       <div className="px-6 py-6 space-y-8 max-w-5xl mx-auto">
