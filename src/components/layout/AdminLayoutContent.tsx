@@ -148,7 +148,7 @@ export const AdminLayoutContent = ({ collapsed, onCollapseChange, location }: Ad
               </button>
             </div>
 
-            <nav className="flex-1 overflow-y-auto py-4 px-2">
+            <nav className="flex-1 overflow-y-auto py-4 px-2 subtle-scrollbar">
               {ADMIN_NAV.map((item) => {
                 const active = isActive(item.path);
                 const Icon = item.icon;
@@ -206,7 +206,7 @@ export const AdminLayoutContent = ({ collapsed, onCollapseChange, location }: Ad
         {desktopSidebar}
         <div className="flex-1 flex flex-col min-w-0 overflow-hidden">
           <AdminHeader titleKey={getTitleKey(location.pathname)} />
-          <main className="flex-1 p-4 md:p-6 max-w-7xl mx-auto w-full overflow-y-auto">
+          <main className="flex-1 p-4 md:p-6 max-w-7xl mx-auto w-full overflow-y-auto subtle-scrollbar">
             <Outlet />
           </main>
         </div>
@@ -218,7 +218,7 @@ export const AdminLayoutContent = ({ collapsed, onCollapseChange, location }: Ad
         {mobileDrawer}
         <div className="flex-1 flex flex-col overflow-hidden pt-16">
           <AdminHeader titleKey={getTitleKey(location.pathname)} />
-          <main className="flex-1 p-4 md:p-6 max-w-7xl mx-auto w-full overflow-y-auto">
+          <main className="flex-1 p-4 md:p-6 max-w-7xl mx-auto w-full overflow-y-auto subtle-scrollbar">
             <Outlet />
           </main>
         </div>
