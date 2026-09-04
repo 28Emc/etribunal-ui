@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { useTranslation } from 'react-i18next';
-import { useNavigate, useLocation, Outlet, type Location } from 'react-router-dom';
+import { useNavigate, useLocation, Outlet, type Location, Link } from 'react-router-dom';
 import { Cpu, Users, Shield, BarChart, Settings, ChevronLeft, ChevronRight, Menu, X } from 'lucide-react';
 import { cn } from '@utils/helpers';
 import { Tooltip } from '@shared/components/Tooltip';
@@ -51,9 +51,16 @@ export const AdminLayoutContent = ({ collapsed, onCollapseChange, location }: Ad
     >
       <div className="flex h-16 items-center justify-between px-4 border-b border-border-main/10">
         {!collapsed && (
-          <span className="text-lg font-black uppercase tracking-widest italic text-primary">
-            {t('admin.sidebar.title')}
-          </span>
+          <Link to="/admin/motor-ia" className="flex items-center justify-center" aria-label={t('admin.sidebar.title')}>
+            <img src="/icons/eTribunal-isotipo.png" alt="eTribunal" className="h-8 w-auto" />
+          </Link>
+        )}
+        {collapsed && (
+          <div className="flex items-center justify-center w-full">
+            <Link to="/admin/motor-ia" className="flex items-center justify-center" aria-label={t('admin.sidebar.title')}>
+              <img src="/icons/eTribunal-isotipo.png" alt="eTribunal" className="h-8 w-auto" />
+            </Link>
+          </div>
         )}
         <button
           onClick={toggleCollapsed}
