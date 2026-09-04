@@ -1,13 +1,15 @@
-import React, { useState, useEffect } from 'react';
-import { Outlet, useNavigate, useLocation } from 'react-router-dom';
+import React, { useState, useEffect, Suspense, lazy } from 'react';
+import { useNavigate, useLocation, type Location } from 'react-router-dom';
 import { LoadingState } from '@components/ui/LoadingState';
 import { useAuth } from '@context/AuthContext';
 import { AUTOMATION_ADMIN_ROLES } from '@hooks/useAutomation';
-import { AdminSidebar } from './AdminSidebar';
 import { AdminHeader } from './AdminHeader';
 import { cn } from '@utils/helpers';
+import { motion, AnimatePresence } from 'motion/react';
 
 const STORAGE_KEY = 'admin_sidebar_collapsed';
+
+const AdminLayoutContent = React.lazy(() => import('./AdminLayoutContent').then(m => ({ default: m.AdminLayoutContent })));
 
 export const AdminLayout = () => {
   const { currentUser, isLoading } = useAuth();
@@ -37,15 +39,20 @@ export const AdminLayout = () => {
   }
 
   return (
-    <div className={cn('h-screen flex flex-col overflow-hidden transition-colors duration-150', 'bg-background text-text-main theme-transition')}>
-      <AdminSidebar collapsed={collapsed} onCollapseChange={setCollapsed} />
-      <div className={cn('flex-1 flex flex-col min-w-0 overflow-hidden transition-all duration-200', collapsed ? 'lg:ml-18' : 'lg:ml-72')}>
-        <AdminHeader titleKey={getTitleKey(location.pathname)} />
-        <main className="flex-1 p-4 md:p-6 max-w-7xl mx-auto w-full overflow-y-auto">
-          <Outlet />
-        </main>
-      </div>
-    </div>
+    <AnimatePresence mode="wait">
+      <motion.div
+        key="admin-layout"
+        initial={{ opacity: 0 }}
+        animate={{ opacity: 1 }}
+        exit={{ opacity: 0 }}
+        transition={{ duration: 0.15 }}
+        className={cn('h-screen flex flex-col overflow-hidden transition-colors duration-150', 'bg-background text-text-main theme-transition')}
+      >
+        <Suspense fallback={<LoadingState />}>
+          <AdminLayoutContent collapsed={collapsed} onCollapseChange={setCollapsed} location={location as Location} />
+        </Suspense>
+      </motion.div>
+    </AnimatePresence>
   );
 };
 
