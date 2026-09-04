@@ -37,7 +37,7 @@ export const AdminLayoutContent = ({ collapsed, onCollapseChange, location }: Ad
 
   const toggleCollapsed = () => onCollapseChange(!collapsed);
 
-  const sidebarWidth = collapsed ? 'w-18' : 'w-72';
+  const sidebarWidth = collapsed ? 'w-14' : 'w-72';
 
   // Desktop sidebar (no fixed, part of flex)
   const desktopSidebar = (
@@ -49,29 +49,31 @@ export const AdminLayoutContent = ({ collapsed, onCollapseChange, location }: Ad
       )}
       aria-label={t('admin.sidebar.navigation')}
     >
-      <div className="flex h-16 items-center justify-between px-4 border-b border-border-main/10">
-        {!collapsed && (
-          <Link to="/admin/motor-ia" className="flex items-center justify-center" aria-label={t('admin.sidebar.title')}>
-            <img src="/icons/eTribunal-isotipo.png" alt="eTribunal" className="h-8 w-auto" />
+      <div className="flex h-16 items-center justify-between px-3 border-b border-border-main/10">
+        <div className="flex items-center justify-center w-full">
+          <Link
+            to="/admin/motor-ia"
+            onClick={(e) => {
+              if (collapsed) {
+                e.preventDefault();
+                toggleCollapsed();
+              }
+            }}
+            className="flex items-center justify-center"
+            aria-label={t('admin.sidebar.title')}
+          >
+            <img src="/icons/eTribunal-isotipo.png" alt="eTribunal" className={cn('h-8 w-auto transition-opacity', collapsed && 'opacity-80 hover:opacity-100')} />
           </Link>
+        </div>
+        {!collapsed && (
+          <button
+            onClick={toggleCollapsed}
+            className="lg:flex ml-auto w-8 h-8 rounded-lg flex items-center justify-center text-text-muted hover:bg-border-main/10"
+            aria-label={t('admin.sidebar.collapse')}
+          >
+            <ChevronLeft className="w-5 h-5" />
+          </button>
         )}
-        {collapsed && (
-          <div className="flex items-center justify-center w-full">
-            <Link to="/admin/motor-ia" className="flex items-center justify-center" aria-label={t('admin.sidebar.title')}>
-              <img src="/icons/eTribunal-isotipo.png" alt="eTribunal" className="h-8 w-auto" />
-            </Link>
-          </div>
-        )}
-        <button
-          onClick={toggleCollapsed}
-          className={cn(
-            'lg:flex ml-auto w-8 h-8 rounded-lg flex items-center justify-center text-text-muted hover:bg-border-main/10',
-            collapsed && 'rotate-180'
-          )}
-          aria-label={collapsed ? t('admin.sidebar.expand') : t('admin.sidebar.collapse')}
-        >
-          {collapsed ? <ChevronRight className="w-5 h-5" /> : <ChevronLeft className="w-5 h-5" />}
-        </button>
       </div>
 
       <nav className="flex-1 overflow-y-auto py-4 px-2">
