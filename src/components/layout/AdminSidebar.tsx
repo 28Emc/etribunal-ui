@@ -14,28 +14,23 @@ const ADMIN_NAV = [
   { id: 'settings', icon: Settings, labelKey: 'admin.settings', path: '/admin/settings' },
 ] as const;
 
+interface AdminSidebarProps {
+  collapsed: boolean;
+  onCollapseChange: (collapsed: boolean) => void;
+}
+
 const STORAGE_KEY = 'admin_sidebar_collapsed';
 
-export const AdminSidebar = () => {
+export const AdminSidebar = ({ collapsed, onCollapseChange }: AdminSidebarProps) => {
   const { t } = useTranslation();
   const navigate = useNavigate();
   const location = useLocation();
 
-  const [collapsed, setCollapsed] = useState(() => {
-    if (typeof window !== 'undefined') {
-      return localStorage.getItem(STORAGE_KEY) === 'true';
-    }
-    return false;
-  });
   const [mobileOpen, setMobileOpen] = useState(false);
-
-  useEffect(() => {
-    localStorage.setItem(STORAGE_KEY, String(collapsed));
-  }, [collapsed]);
 
   const isActive = (path: string) => location.pathname === path || location.pathname.startsWith(path + '/');
 
-  const toggleCollapsed = () => setCollapsed(prev => !prev);
+  const toggleCollapsed = () => onCollapseChange(!collapsed);
 
   return (
     <>
@@ -65,7 +60,7 @@ export const AdminSidebar = () => {
         exit={{ x: -300 }}
         transition={{ type: 'spring', damping: 25, stiffness: 300 }}
         className={cn(
-          'fixed lg:relative inset-y-0 left-0 z-50 lg:z-40 flex flex-col bg-card border-r border-border-main/10 transition-all duration-200',
+          'fixed lg:relative lg:top-16 inset-y-0 left-0 z-50 lg:z-40 flex flex-col bg-card border-r border-border-main/10 transition-all duration-200',
           collapsed ? 'w-18' : 'w-72',
           mobileOpen ? 'translate-x-0' : '-translate-x-full lg:translate-x-0'
         )}

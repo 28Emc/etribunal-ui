@@ -1,8 +1,10 @@
 import React from 'react';
 import { useTranslation } from 'react-i18next';
 import { useNavigate, useLocation } from 'react-router-dom';
-import { Home, Plus, User, Settings, TrendingUp } from 'lucide-react';
+import { Home, Plus, User, Settings, TrendingUp, Cpu } from 'lucide-react';
 import { cn } from '@utils/helpers';
+import { useAuth } from '@context/AuthContext';
+import { AUTOMATION_ADMIN_ROLES } from '@hooks/useAutomation';
 
 interface SidebarProps {
   activeTab: string;
@@ -30,6 +32,8 @@ export const Sidebar = ({
   const { t } = useTranslation();
   const navigate = useNavigate();
   const location = useLocation();
+  const { currentUser } = useAuth();
+  const isAdmin = !!currentUser && AUTOMATION_ADMIN_ROLES.includes(currentUser.role);
 
   const navItems: Array<{ id: string; icon: React.ForwardRefExoticComponent<any>; label: string; onClick?: () => void }> = [
     { id: 'for_you', icon: Home, label: t('nav.feed') },
@@ -80,6 +84,16 @@ export const Sidebar = ({
           <Plus className="w-6 h-6" />
           <span>{t('layout.newCase')}</span>
         </button>
+
+        {isAdmin && (
+          <button
+            onClick={() => navigate('/admin/motor-ia')}
+            className="flex items-center gap-4 px-4 py-4 rounded-2xl text-text-muted hover:bg-border-main/5 hover:text-text-main transition-all group mb-4"
+          >
+            <Cpu className="w-6 h-6 group-hover:text-sky-400 transition-colors" />
+            <span className="text-sm font-black uppercase tracking-widest italic">{t('automation.title')}</span>
+          </button>
+        )}
 
         <button
           onClick={onSettingsClick}
