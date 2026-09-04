@@ -42,7 +42,6 @@ export const AdminHeader = ({ titleKey }: AdminHeaderProps) => {
   };
 
   const breadcrumbs = [
-    { label: t('admin.header.admin'), href: '/admin' },
     ...(titleKey ? [{ label: t(titleKey), href: location.pathname }] : []),
   ];
 
