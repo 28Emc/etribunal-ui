@@ -38,7 +38,6 @@ export const AdminLayoutContent = ({ collapsed, onCollapseChange, location }: Ad
   const toggleCollapsed = () => onCollapseChange(!collapsed);
 
   const sidebarWidth = collapsed ? 'w-18' : 'w-72';
-  const contentMargin = collapsed ? 'lg:ml-18' : 'lg:ml-72';
 
   // Desktop sidebar (no fixed, part of flex)
   const desktopSidebar = (
@@ -205,7 +204,7 @@ export const AdminLayoutContent = ({ collapsed, onCollapseChange, location }: Ad
       {/* Desktop: flex row with sidebar + content */}
       <div className="hidden lg:flex h-full w-full">
         {desktopSidebar}
-        <div className={cn('flex-1 flex flex-col min-w-0 overflow-hidden', contentMargin)}>
+        <div className="flex-1 flex flex-col min-w-0 overflow-hidden">
           <AdminHeader titleKey={getTitleKey(location.pathname)} />
           <main className="flex-1 p-4 md:p-6 max-w-7xl mx-auto w-full overflow-y-auto">
             <Outlet />
