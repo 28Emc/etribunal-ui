@@ -133,7 +133,7 @@ export const AdminLayoutContent = ({ collapsed, onCollapseChange, location }: Ad
               {buttonContent}
             </Tooltip>
           ) : (
-            buttonContent
+            <div key={item.id}>{buttonContent}</div>
           );
         })}
         <div className="border-t border-border-main/10 my-2" />
