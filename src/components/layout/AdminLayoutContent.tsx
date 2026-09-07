@@ -97,7 +97,7 @@ export const AdminLayoutContent = ({ collapsed, onCollapseChange, location }: Ad
       </div>
 
       <nav className="flex-1 overflow-y-auto py-4 px-2 subtle-scrollbar">
-        {ADMIN_NAV.map((item) => {
+        {ADMIN_NAV.filter((item) => !item.disabled).map((item) => {
           const active = isActive(item.path);
           const Icon = item.icon;
           const label = t(item.labelKey);
@@ -201,7 +201,7 @@ export const AdminLayoutContent = ({ collapsed, onCollapseChange, location }: Ad
             </div>
 
             <nav className="flex-1 overflow-y-auto py-4 px-2 subtle-scrollbar">
-              {ADMIN_NAV.map((item) => {
+              {ADMIN_NAV.filter((item) => !item.disabled).map((item) => {
                 const active = isActive(item.path);
                 const Icon = item.icon;
                 const label = t(item.labelKey);
