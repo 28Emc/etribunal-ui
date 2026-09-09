@@ -1,7 +1,8 @@
-import { lazy, Suspense, useEffect } from 'react';
+import { lazy, Suspense, useEffect, useLayoutEffect, useRef, useState } from 'react';
 import { Routes, Route, Navigate, useLocation, useNavigate } from 'react-router-dom';
 import { MainLayout } from '@layout/MainLayout';
 import { AdminLayout } from '@layout/AdminLayout';
+import { LoadingScreen } from '@components/ui/LoadingScreen';
 import { LoadingState } from '@components/ui/LoadingState';
 import { useAuth } from '@context/AuthContext';
 import { consumeInviteDeepLink } from '@pages/InvitePage';
@@ -62,6 +63,36 @@ export default function AppRoutes() {
   const { currentUser, isLoading } = useAuth();
   const location = useLocation();
   const navigate = useNavigate();
+  const [bootReady, setBootReady] = useState(false);
+  const [sectionTransitioning, setSectionTransitioning] = useState(false);
+  const prevAdminRef = useRef(location.pathname.startsWith('/admin'));
+
+  // Pantalla de carga mínima de 500ms para evitar parpadeos al arrancar
+  useEffect(() => {
+    const started = performance.now();
+    let raf = 0;
+    const tick = () => {
+      if (performance.now() - started >= 500) {
+        setBootReady(true);
+      } else {
+        raf = requestAnimationFrame(tick);
+      }
+    };
+    raf = requestAnimationFrame(tick);
+    return () => cancelAnimationFrame(raf);
+  }, []);
+
+  // Loader de marca al cruzar entre la app (/) y el panel admin (/admin/**)
+  useLayoutEffect(() => {
+    const isAdmin = location.pathname.startsWith('/admin');
+    const crossedSection = prevAdminRef.current !== isAdmin;
+    prevAdminRef.current = isAdmin;
+    if (crossedSection) {
+      setSectionTransitioning(true);
+      const timer = setTimeout(() => setSectionTransitioning(false), 500);
+      return () => clearTimeout(timer);
+    }
+  }, [location.pathname]);
 
   useEffect(() => {
     const deepLink = parseDeepLink(location.pathname);
@@ -86,8 +117,8 @@ export default function AppRoutes() {
     }
   }, [currentUser, isLoading, navigate]);
 
-  if (isLoading) {
-    return <LoadingState />;
+  if (isLoading || !bootReady || sectionTransitioning) {
+    return <LoadingScreen />;
   }
 
   return (

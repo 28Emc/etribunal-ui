@@ -13,6 +13,7 @@ import { Skeleton } from '@shared/components/Skeleton';
 import { cn, getCasePath } from '@utils/helpers';
 import { getAnonymousAvatar } from '@services/anonymity';
 import { AnimatePresence, motion } from 'motion/react';
+import { useTheme } from '@hooks/useTheme';
 
 const NotificationsMenu = lazy(() => import('@features/users/components/NotificationsMenu').then(m => ({ default: m.NotificationsMenu })));
 const Login = lazy(() => import('@features/auth/components/Login').then(m => ({ default: m.Login })));
@@ -165,8 +166,8 @@ export function MainLayout({ children, activeTab = 'for_you' }: MainLayoutProps)
               <Menu className="w-5 h-5" />
             </button>
             <Link to="/">
-              <img src="/icons/eTribunal-isotipo.png" alt="eTribunal" className="h-10 w-auto lg:hidden" />
-              <img src="/icons/eTribunal-logo-horizontal.png" alt="eTribunal" className="hidden lg:block h-12 w-auto" />
+              <img src={theme === 'dark' ? '/icons/eTribunal-isotipo-bn.png' : '/icons/eTribunal-isotipo.png'} alt="eTribunal" className="h-10 w-auto lg:hidden" />
+              <img src={theme === 'dark' ? '/icons/eTribunal-logo-horizontal-bn.png' : '/icons/eTribunal-logo-horizontal.png'} alt="eTribunal" className="hidden lg:block h-12 w-auto" />
             </Link>
           </div>
 
@@ -367,7 +368,7 @@ export function MainLayout({ children, activeTab = 'for_you' }: MainLayoutProps)
             <motion.div initial={{ x: '-100%' }} animate={{ x: 0 }} exit={{ x: '-100%' }} transition={{ type: 'spring', damping: 25, stiffness: 300 }} className="fixed top-0 left-0 bottom-0 z-[80] w-80 bg-card border-r border-border-main/10 pt-4 lg:hidden overflow-y-auto">
               <div className="flex items-center justify-between px-4 pb-4 border-b border-border-main/10">
                 <Link to="/" onClick={() => setShowSidebar(false)}>
-                  <img src="/icons/eTribunal-logo-horizontal.png" alt="eTribunal" className="h-16 w-auto" />
+                  <img src={theme === 'dark' ? '/icons/eTribunal-logo-horizontal-bn.png' : '/icons/eTribunal-logo-horizontal.png'} alt="eTribunal" className="h-16 w-auto" />
                 </Link>
                 <button onClick={() => setShowSidebar(false)} className="w-9 h-9 rounded-lg bg-border-main/10 flex items-center justify-center text-text-main">
                   <X className="w-5 h-5" />

@@ -8,6 +8,7 @@ import { apiClient, authStorage } from '@api/client';
 import { useAuth } from '@context/AuthContext';
 import { cn } from '@utils/helpers';
 import { useDebounce } from '@hooks/useDebounce';
+import { useTheme } from '@hooks/useTheme';
 
 function SuccessOverlay({ onComplete }: { onComplete: () => void }) {
   const { t } = useTranslation();
@@ -64,6 +65,7 @@ export const Login: React.FC<LoginProps> = ({ onOpenTerms, isModal = false, onCl
   const { login } = useAuth();
   const { t, i18n } = useTranslation();
   const navigate = useNavigate();
+  const theme = useTheme();
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [username, setUsername] = useState('');
@@ -365,7 +367,7 @@ export const Login: React.FC<LoginProps> = ({ onOpenTerms, isModal = false, onCl
           {/* Logo Section */}
           <div className="flex flex-col items-center mb-10 text-center">
             <motion.img
-              src="/icons/eTribunal-isotipo.png"
+              src={theme === 'dark' ? '/icons/eTribunal-isotipo-bn.png' : '/icons/eTribunal-isotipo.png'}
               alt="eTribunal"
               animate={{ rotate: [0, -10, 10, 0] }}
               transition={{ duration: 4, repeat: Infinity, ease: "easeInOut" }}

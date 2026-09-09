@@ -1,12 +1,13 @@
 import React, { useState, useEffect } from 'react';
 import { useTranslation } from 'react-i18next';
 import { useNavigate, useLocation, Outlet, type Location, Link } from 'react-router-dom';
-import { Cpu, Users, Shield, BarChart, Settings, ChevronLeft, ChevronRight, Menu, X, RotateCcw } from 'lucide-react';
+import { Cpu, Users, Shield, BarChart, Settings, ChevronLeft, ChevronRight, X, RotateCcw } from 'lucide-react';
 import { cn } from '@utils/helpers';
 import { Tooltip } from '@shared/components/Tooltip';
 import { motion, AnimatePresence } from 'motion/react';
 import { AdminHeader } from './AdminHeader';
 import { createPortal } from 'react-dom';
+import { useTheme } from '@hooks/useTheme';
 
 const ADMIN_NAV = [
   { id: 'motor-ia', icon: Cpu, labelKey: 'automation.title', path: '/admin/motor-ia', disabled: false },
@@ -25,6 +26,7 @@ interface AdminLayoutContentProps {
 export const AdminLayoutContent = ({ collapsed, onCollapseChange, location }: AdminLayoutContentProps) => {
   const { t } = useTranslation();
   const navigate = useNavigate();
+  const theme = useTheme();
 
   const [mobileOpen, setMobileOpen] = useState(false);
   const [mounted, setMounted] = useState(false);
@@ -65,7 +67,7 @@ export const AdminLayoutContent = ({ collapsed, onCollapseChange, location }: Ad
             {/* Desktop expanded: horizontal logo */}
             {!collapsed && (
               <img
-                src="/icons/eTribunal-logo-horizontal.png"
+                src={theme === 'dark' ? '/icons/eTribunal-logo-horizontal-bn.png' : '/icons/eTribunal-logo-horizontal.png'}
                 alt="eTribunal"
                 className="hidden lg:block h-8 w-auto transition-opacity"
               />
@@ -73,13 +75,13 @@ export const AdminLayoutContent = ({ collapsed, onCollapseChange, location }: Ad
             {/* Desktop collapsed or mobile: isotipo */}
             {(collapsed || true) && (
               <img
-                src="/icons/eTribunal-isotipo.png"
+                src={theme === 'dark' ? '/icons/eTribunal-isotipo-bn.png' : '/icons/eTribunal-isotipo.png'}
                 alt="eTribunal"
                 className={cn(
                   'h-8 w-auto transition-opacity',
-                  'lg:hidden', // mobile: always show isotipo
-                  collapsed && 'lg:block', // desktop collapsed: show isotipo
-                  !collapsed && 'lg:hidden' // desktop expanded: hide isotipo
+                  'lg:hidden',
+                  collapsed && 'lg:block',
+                  !collapsed && 'lg:hidden'
                 )}
               />
             )}
@@ -183,7 +185,7 @@ export const AdminLayoutContent = ({ collapsed, onCollapseChange, location }: Ad
             animate={{ x: 0 }}
             exit={{ x: -300 }}
             transition={{ type: 'spring', damping: 25, stiffness: 300 }}
-            className="fixed inset-y-0 left-0 z-60 lg:hidden w-72 bg-card border-r border-border-main/10 flex flex-col"
+            className="fixed inset-y-0 left-0 z-[60] lg:hidden w-72 bg-card border-r border-border-main/10 flex flex-col"
             role="dialog"
             aria-label={t('admin.sidebar.navigation')}
           >
@@ -261,16 +263,6 @@ export const AdminLayoutContent = ({ collapsed, onCollapseChange, location }: Ad
     , document.body) : null;
 
   // Mobile menu button
-  const mobileMenuButton = (
-    <button
-      className="lg:hidden fixed top-16 left-4 z-50 w-9 h-9 rounded-lg bg-card border border-border-main/10 flex items-center justify-center text-text-main active:scale-95 transition-transform shadow-lg"
-      onClick={() => setMobileOpen(true)}
-      aria-label={t('admin.sidebar.open')}
-    >
-      <Menu className="w-5 h-5" />
-    </button>
-  );
-
   return (
     <div className="h-screen flex flex-col overflow-hidden">
       {/* Desktop: flex row with sidebar + content */}
@@ -286,10 +278,13 @@ export const AdminLayoutContent = ({ collapsed, onCollapseChange, location }: Ad
 
       {/* Mobile: stacked layout with drawer portal */}
       <div className="lg:hidden h-full flex flex-col">
-        {mobileMenuButton}
         {mobileDrawer}
-        <div className="flex-1 flex flex-col overflow-hidden pt-16">
-          <AdminHeader titleKey={getTitleKey(location.pathname)} />
+        <div className="flex-1 flex flex-col overflow-hidden">
+          <AdminHeader
+            titleKey={getTitleKey(location.pathname)}
+            onMobileMenuToggle={() => setMobileOpen(true)}
+            showMobileMenuButton
+          />
           <main className="flex-1 p-4 md:p-6 max-w-7xl mx-auto w-full overflow-y-auto subtle-scrollbar">
             <Outlet />
           </main>

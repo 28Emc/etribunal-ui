@@ -9,9 +9,11 @@ import { motion, AnimatePresence } from 'motion/react';
 
 interface AdminHeaderProps {
   titleKey?: string;
+  onMobileMenuToggle?: () => void;
+  showMobileMenuButton?: boolean;
 }
 
-export const AdminHeader = ({ titleKey }: AdminHeaderProps) => {
+export const AdminHeader = ({ titleKey, onMobileMenuToggle, showMobileMenuButton }: AdminHeaderProps) => {
   const { t, i18n } = useTranslation();
   const navigate = useNavigate();
   const location = useLocation();
@@ -46,9 +48,18 @@ export const AdminHeader = ({ titleKey }: AdminHeaderProps) => {
   ];
 
   return (
-    <header className="sticky top-0 z-40 glass border-b border-border-main/10">
+    <header className="sticky top-0 z-50 glass border-b border-border-main/10">
       <div className="max-w-7xl mx-auto px-4 md:px-6 h-16 flex items-center justify-between">
         <div className="flex items-center gap-4 min-w-0">
+          {showMobileMenuButton && onMobileMenuToggle && (
+            <button
+              onClick={onMobileMenuToggle}
+              className="lg:hidden w-9 h-9 rounded-lg bg-card border border-border-main/10 flex items-center justify-center text-text-main active:scale-95 transition-transform shadow-lg"
+              aria-label={t('admin.sidebar.open')}
+            >
+              <Menu className="w-5 h-5" />
+            </button>
+          )}
           <nav aria-label="Breadcrumb" className="flex items-center gap-2 text-sm flex-wrap">
             {breadcrumbs.map((crumb, idx) => (
               <span key={idx} className="flex items-center gap-2">
