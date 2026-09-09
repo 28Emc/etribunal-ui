@@ -751,9 +751,29 @@
     "intensityMax": "Intensidad máxima",
     "dailyPoolSize": "Pool diario de usuarios",
     "rssFeedUrls": "URLs de feeds RSS (una por línea)",
+    "hints": {
+      "enabled": "Activa o desactiva el motor de IA completo. Si está desactivado, no se ejecutarán runs automáticos.",
+      "dryRun": "Modo simulación: planifica y loguea las acciones sin crear casos ni interacciones reales en la BD.",
+      "activityWeighted": "Distribuye las interacciones a lo largo del día según la actividad real de usuarios (más interacciones en horas punta).",
+      "engagementEnabled": "Habilita el cálculo de engagement para ajustar la frecuencia de interacciones según el rendimiento de los casos.",
+      "runHour": "Hora (0-23) en la que se lanza el run diario automático (zona horaria del servidor).",
+      "dailyCasesMin": "Número mínimo de casos que el motor creará en cada run diario.",
+      "dailyCasesMax": "Número máximo de casos que el motor creará en cada run diario (se elige aleatoriamente entre min y max).",
+      "usersPerCaseMin": "Mínimo de usuarios del pool que participarán en cada caso generado.",
+      "usersPerCaseMax": "Máximo de usuarios del pool que participarán en cada caso generado.",
+      "schedulingIntervalMin": "Intervalo mínimo en minutos entre interacciones consecutivas del mismo usuario.",
+      "schedulingIntervalMax": "Intervalo máximo en minutos entre interacciones consecutivas del mismo usuario.",
+      "schedulingWindowHours": "Ventana máxima de horas para completar todas las interacciones programadas del día.",
+      "intensityMin": "Intensidad mínima de las interacciones IA (0=provocador, 100=serio/razonado).",
+      "intensityMax": "Intensidad máxima de las interacciones IA (0=provocador, 100=serio/razonado).",
+      "dailyPoolSize": "Tamaño del pool de usuarios bots seleccionados al azar para el día (0 = automático según carga).",
+      "rssFeedUrls": "Lista de URLs de feeds RSS para inspirar temas de casos (una por línea, opcional)."
+    },
     "kpi": {
       "casesCreated": "Casos creados",
       "casesCreatedHint": "Total en runs recientes",
+      "realCases": "reales",
+      "dryRunCases": "dry-runs",
       "totalInteractions": "Interacciones en cola",
       "queueHint": "Scheduled + processing",
       "avgScore": "Score promedio",
@@ -797,6 +817,12 @@
       "saved": "Configuración guardada.",
       "runTriggered": "Run disparado exitosamente.",
       "runTriggeredDry": "Run (dry) disparado exitosamente."
+    },
+    "confirmRun": {
+      "title": "Confirmar ejecución real",
+      "message": "Esta acción ejecutará el motor de IA en modo REAL (no dry-run). Se crearán casos y interacciones reales en la base de datos. ¿Deseas continuar?",
+      "confirm": "Ejecutar ahora",
+      "cancel": "Cancelar"
     },
     "errors": {
       "settingsLoad": "No se pudieron cargar los ajustes.",

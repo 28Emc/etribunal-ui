@@ -762,9 +762,29 @@
     "intensityMax": "Max intensity",
     "dailyPoolSize": "Daily user pool",
     "rssFeedUrls": "RSS feed URLs (one per line)",
+    "hints": {
+      "enabled": "Enable or disable the AI engine completely. When disabled, no automatic runs will execute.",
+      "dryRun": "Simulation mode: plans and logs actions without creating real cases or interactions in the database.",
+      "activityWeighted": "Distributes interactions throughout the day based on real user activity (more interactions during peak hours).",
+      "engagementEnabled": "Enables engagement calculation to adjust interaction frequency based on case performance.",
+      "runHour": "Hour (0-23) when the daily automatic run is triggered (server timezone).",
+      "dailyCasesMin": "Minimum number of cases the engine will create in each daily run.",
+      "dailyCasesMax": "Maximum number of cases the engine will create in each daily run (randomly chosen between min and max).",
+      "usersPerCaseMin": "Minimum number of users from the pool that will participate in each generated case.",
+      "usersPerCaseMax": "Maximum number of users from the pool that will participate in each generated case.",
+      "schedulingIntervalMin": "Minimum interval in minutes between consecutive interactions by the same user.",
+      "schedulingIntervalMax": "Maximum interval in minutes between consecutive interactions by the same user.",
+      "schedulingWindowHours": "Maximum time window in hours to complete all scheduled interactions for the day.",
+      "intensityMin": "Minimum AI interaction intensity (0=provocative, 100=serious/reasoned).",
+      "intensityMax": "Maximum AI interaction intensity (0=provocative, 100=serious/reasoned).",
+      "dailyPoolSize": "Size of the randomly selected bot user pool for the day (0 = automatic based on load).",
+      "rssFeedUrls": "List of RSS feed URLs for case topic inspiration (one per line, optional)."
+    },
     "kpi": {
       "casesCreated": "Cases created",
       "casesCreatedHint": "Total across recent runs",
+      "realCases": "real",
+      "dryRunCases": "dry-runs",
       "totalInteractions": "Interactions in queue",
       "queueHint": "Scheduled + processing",
       "avgScore": "Average score",
@@ -808,6 +828,12 @@
       "saved": "Configuration saved.",
       "runTriggered": "Run triggered successfully.",
       "runTriggeredDry": "Dry run triggered successfully."
+    },
+    "confirmRun": {
+      "title": "Confirm real execution",
+      "message": "This action will run the AI engine in REAL mode (not dry-run). Real cases and interactions will be created in the database. Do you want to continue?",
+      "confirm": "Run now",
+      "cancel": "Cancel"
     },
     "errors": {
       "settingsLoad": "Could not load settings.",

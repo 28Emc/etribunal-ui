@@ -1,4 +1,4 @@
-import { useState, useCallback, useEffect } from 'react';
+import { useState, useCallback, useEffect, useRef } from 'react';
 import { useAuth } from '@context/AuthContext';
 import type { User } from '@typings/index';
 import {
@@ -15,6 +15,8 @@ import {
   type AutomationQueueStatus,
   type AutomationEngagement,
 } from '@api/automation';
+import { Client, type IMessage } from '@stomp/stompjs';
+import SockJS from 'sockjs-client';
 
 export const AUTOMATION_ADMIN_ROLES: User['role'][] = ['ADMIN', 'SYSADMIN'];
 
@@ -45,10 +47,11 @@ interface UseAutomationState {
   triggerRun: (dryRun?: boolean) => Promise<AutomationRunTrigger | null>;
   refreshAll: () => Promise<void>;
   clearError: () => void;
+  clearRunDetail: () => void;
 }
 
 export function useAutomation(): UseAutomationState {
-  const { currentUser } = useAuth();
+  const { currentUser, token } = useAuth();
   const canManage = isAdminRole(currentUser?.role);
 
   const [settings, setSettings] = useState<AutomationSettings | null>(null);
@@ -64,6 +67,9 @@ export function useAutomation(): UseAutomationState {
   const [isSavingSettings, setIsSavingSettings] = useState(false);
   const [isTriggeringRun, setIsTriggeringRun] = useState(false);
   const [error, setError] = useState<string | null>(null);
+
+  const stompClientRef = useRef<Client | null>(null);
+  const wsConnectedRef = useRef(false);
 
   const loadSettings = useCallback(async () => {
     if (!canManage) return;
@@ -195,7 +201,108 @@ export function useAutomation(): UseAutomationState {
     }
   }, [canManage, refreshAll]);
 
+  // WebSocket connection for real-time updates
+  useEffect(() => {
+    if (!canManage || !token) return;
+
+    const wsUrl = import.meta.env.VITE_WS_URL || 'http://localhost:8083/ws/automation';
+    
+    const client = new Client({
+      webSocketFactory: () => new SockJS(wsUrl),
+      connectHeaders: {
+        Authorization: `Bearer ${token}`,
+      },
+      reconnectDelay: 5000,
+      heartbeatIncoming: 10000,
+      heartbeatOutgoing: 10000,
+      onConnect: () => {
+        wsConnectedRef.current = true;
+        console.log('[Automation WS] Connected');
+        
+        // Subscribe to real-time topics
+        client.subscribe('/topic/automation/run', (message: IMessage) => {
+          try {
+            const data = JSON.parse(message.body);
+            if (data.type === 'RUN_UPDATE' || data.type === 'RUN_STARTED' || data.type === 'RUN_CREATED') {
+              const runId: string | undefined = data.id || data.runId;
+              if (!runId) return;
+              const { type, ...runFields } = data;
+              setRuns(prev => {
+                const idx = prev.findIndex(r => r.id === runId);
+                if (idx >= 0) {
+                  const updated = [...prev];
+                  updated[idx] = { ...updated[idx], ...runFields };
+                  return updated;
+                }
+                return [{ ...runFields, id: runId }, ...prev];
+              });
+            }
+          } catch (e) {
+            console.error('[Automation WS] Error parsing run update:', e);
+          }
+        });
+
+        client.subscribe('/topic/automation/queue', (message: IMessage) => {
+          try {
+            const data = JSON.parse(message.body);
+            if (data.type === 'QUEUE_UPDATE') {
+              const { type: _type, ...queueFields } = data;
+              setQueue(queueFields as AutomationQueueStatus);
+            }
+          } catch (e) {
+            console.error('[Automation WS] Error parsing queue update:', e);
+          }
+        });
+
+        client.subscribe('/topic/automation/settings', (message: IMessage) => {
+          try {
+            const data = JSON.parse(message.body);
+            if (data.type === 'SETTINGS_UPDATE') {
+              const { type: _type, ...settingsFields } = data;
+              setSettings(settingsFields as AutomationSettings);
+            }
+          } catch (e) {
+            console.error('[Automation WS] Error parsing settings update:', e);
+          }
+        });
+
+        client.subscribe('/topic/automation/engagement', (message: IMessage) => {
+          try {
+            const data = JSON.parse(message.body);
+            if (data.type === 'ENGAGEMENT_UPDATE') {
+              const { type: _type, ...engagementFields } = data;
+              setEngagement(engagementFields as AutomationEngagement);
+            }
+          } catch (e) {
+            console.error('[Automation WS] Error parsing engagement update:', e);
+          }
+        });
+
+        // Request initial state
+        client.publish({ destination: '/app/automation/subscribe', body: JSON.stringify({}) });
+      },
+      onDisconnect: () => {
+        wsConnectedRef.current = false;
+        console.log('[Automation WS] Disconnected');
+      },
+      onStompError: (frame) => {
+        console.error('[Automation WS] STOMP error:', frame.headers['message'], frame.body);
+      }
+    });
+
+    client.activate();
+    stompClientRef.current = client;
+
+    return () => {
+      if (client.active) {
+        client.deactivate();
+      }
+    };
+  }, [canManage, token]);
+
   const clearError = useCallback(() => setError(null), []);
+
+  const clearRunDetail = useCallback(() => setRunDetail(null), []);
 
   return {
     canManage,
@@ -220,5 +327,6 @@ export function useAutomation(): UseAutomationState {
     triggerRun,
     refreshAll,
     clearError,
+    clearRunDetail,
   };
 }

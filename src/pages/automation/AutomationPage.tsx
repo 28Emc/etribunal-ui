@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
 import {
   Play, RefreshCw, Settings2, Activity, Cpu, ChevronDown,
-  Check, X, Zap, TrendingUp, Clock, ListChecks,
+  Check, X, Zap, TrendingUp, Clock, ListChecks, Info, AlertTriangle,
 } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 import { cn } from '@utils/helpers';
@@ -12,6 +12,8 @@ import { PageLayout } from '@layout/PageLayout';
 import { SEO } from '@components/ui/SEO';
 import { LoadingState, EmptyState } from '@components/ui/LoadingState';
 import { useToast } from '@components/ui/Toast';
+import { Tooltip } from '@shared/components/Tooltip';
+import { ConfirmModal } from '@shared/components/ConfirmModal';
 import type {
   AutomationCasePerformance,
 } from '@api/automation';
@@ -61,8 +63,8 @@ function KpiCard({
 }: {
   icon: React.ElementType;
   label: string;
-  value: string | number;
-  hint?: string;
+  value: React.ReactNode;
+  hint?: React.ReactNode;
   tone?: 'default' | 'accent' | 'success' | 'warning';
 }) {
   const tones: Record<string, string> = {
@@ -133,13 +135,14 @@ export const AutomationPage: React.FC = () => {
     canManage, settings, runs, queue, engagement,
     isLoadingSettings, isLoadingRuns, isLoadingQueue, isLoadingEngagement,
     isSavingSettings, isTriggeringRun, error, saveSettings, triggerRun,
-    refreshAll, clearError, loadRun, runDetail,
+    refreshAll, clearError, loadRun, runDetail, clearRunDetail,
   } = useAutomation();
   const { addToast } = useToast();
 
   const [dirty, setDirty] = useState<Record<string, unknown>>({});
   const [showConfig, setShowConfig] = useState(false);
   const [activeRunId, setActiveRunId] = useState<string | null>(null);
+  const [confirmRun, setConfirmRun] = useState(false);
 
   useEffect(() => {
     if (error) {
@@ -178,6 +181,10 @@ export const AutomationPage: React.FC = () => {
   };
 
   const handleTriggerRun = async (dryRun: boolean) => {
+    if (!dryRun) {
+      setConfirmRun(true);
+      return;
+    }
     const result = await triggerRun(dryRun);
     if (result) {
       addToast(
@@ -186,6 +193,15 @@ export const AutomationPage: React.FC = () => {
           ? t('automation.toasts.runTriggeredDry')
           : t('automation.toasts.runTriggered')
       );
+      setActiveRunId(result.runId);
+    }
+  };
+
+  const handleConfirmRun = async () => {
+    setConfirmRun(false);
+    const result = await triggerRun(false);
+    if (result) {
+      addToast('success', t('automation.toasts.runTriggered'));
       setActiveRunId(result.runId);
     }
   };
@@ -201,6 +217,20 @@ export const AutomationPage: React.FC = () => {
     return runs.reduce((acc, r) => acc + (r.casesCreated || 0), 0);
   };
 
+  const dryRunCasesCreated = () => {
+    if (!runs || runs.length === 0) return 0;
+    return runs
+      .filter(r => r.dryRun)
+      .reduce((acc, r) => acc + (r.casesCreated || 0), 0);
+  };
+
+  const realCasesCreated = () => {
+    if (!runs || runs.length === 0) return 0;
+    return runs
+      .filter(r => !r.dryRun)
+      .reduce((acc, r) => acc + (r.casesCreated || 0), 0);
+  };
+
   const countByStatus = (status: string) =>
     runs.filter((r) => r.status === status).length;
 
@@ -210,15 +240,27 @@ export const AutomationPage: React.FC = () => {
   const renderConfigRow = (
     label: string,
     field: string,
-    type: 'number' | 'bool' | 'text' | 'array' = 'number'
+    type: 'number' | 'bool' | 'text' | 'array' = 'number',
+    hint?: string
   ) => {
     const current = (settings as any)?.[field];
     const value = field in dirty ? (dirty as any)[field] : current;
 
+    const labelWithHint = hint ? (
+      <Tooltip content={hint} position="right" delay={150}>
+        <span className="flex items-center gap-1.5 cursor-help">
+          <span className="text-sm text-text-main">{label}</span>
+          <Info className="w-4 h-4 text-text-muted/50 flex-shrink-0" />
+        </span>
+      </Tooltip>
+    ) : (
+      <span className="text-sm text-text-main">{label}</span>
+    );
+
     if (type === 'bool') {
       return (
         <div className="flex items-center justify-between gap-3 py-2">
-          <span className="text-sm text-text-main">{label}</span>
+          {labelWithHint}
           <Toggle
             checked={!!value}
             onChange={(v) => onChangeField(field, v)}
@@ -231,7 +273,7 @@ export const AutomationPage: React.FC = () => {
       const joined = Array.isArray(value) ? value.join('\n') : '';
       return (
         <div className="py-2">
-          <span className="text-sm text-text-main">{label}</span>
+          {labelWithHint}
           <textarea
             value={joined}
             onChange={(e) =>
@@ -249,7 +291,7 @@ export const AutomationPage: React.FC = () => {
 
     return (
       <div className="py-2">
-        <span className="text-sm text-text-main">{label}</span>
+        {labelWithHint}
         <input
           type="number"
           value={value ?? 0}
@@ -299,8 +341,20 @@ export const AutomationPage: React.FC = () => {
                 <KpiCard
                   icon={Zap}
                   label={t('automation.kpi.casesCreated')}
-                  value={totalInteractionsDone()}
-                  hint={t('automation.kpi.casesCreatedHint')}
+                  value={realCasesCreated()}
+                  hint={
+                    <>
+                      <span className="font-bold text-emerald-400/80">{t('automation.kpi.realCases')}</span>
+                      {dryRunCasesCreated() > 0 && (
+                        <>
+                          <span className="mx-1 text-amber-400">|</span>
+                          <span className="font-bold text-amber-400/80">
+                            {dryRunCasesCreated()} {t('automation.kpi.dryRunCases')}
+                          </span>
+                        </>
+                      )}
+                    </>
+                  }
                   tone="success"
                 />
                 <KpiCard
@@ -354,19 +408,6 @@ export const AutomationPage: React.FC = () => {
                 </button>
                 <button
                   type="button"
-                  onClick={() => handleTriggerRun(true)}
-                  disabled={isTriggeringRun}
-                  className="inline-flex items-center gap-2 px-4 py-2.5 rounded-xl bg-white/5 hover:bg-white/10 text-text-main text-sm font-bold border border-border-main/10 transition-colors disabled:opacity-50"
-                >
-                  {isTriggeringRun ? (
-                    <RefreshCw className="w-4 h-4 animate-spin" />
-                  ) : (
-                    <Play className="w-4 h-4" />
-                  )}
-                  {t('automation.runDry')}
-                </button>
-                <button
-                  type="button"
                   onClick={() => setShowConfig((v) => !v)}
                   className="inline-flex items-center gap-2 px-4 py-2.5 rounded-xl bg-white/5 hover:bg-white/10 text-text-main text-sm font-bold border border-border-main/10 transition-colors"
                 >
@@ -396,41 +437,49 @@ export const AutomationPage: React.FC = () => {
                     <LoadingState />
                   ) : (
                     <div className="bg-card border border-border-main/10 rounded-2xl p-5 space-y-3">
-                      {renderConfigRow(t('automation.enabled'), 'enabled', 'bool')}
-                      {renderConfigRow(t('automation.dryRun'), 'dryRun', 'bool')}
+                      {renderConfigRow(t('automation.enabled'), 'enabled', 'bool', t('automation.hints.enabled'))}
+                      {renderConfigRow(t('automation.dryRun'), 'dryRun', 'bool', t('automation.hints.dryRun'))}
                       {renderConfigRow(
                         t('automation.activityWeighted'),
                         'activityWeighted',
-                        'bool'
+                        'bool',
+                        t('automation.hints.activityWeighted')
                       )}
                       {renderConfigRow(
                         t('automation.engagementEnabled'),
                         'engagementEnabled',
-                        'bool'
+                        'bool',
+                        t('automation.hints.engagementEnabled')
                       )}
                       <div className="h-px bg-border-main/10 my-2" />
-                      {renderConfigRow(t('automation.runHour'), 'runHour')}
-                      {renderConfigRow(t('automation.dailyCasesMin'), 'dailyCasesMin')}
-                      {renderConfigRow(t('automation.dailyCasesMax'), 'dailyCasesMax')}
-                      {renderConfigRow(t('automation.usersPerCaseMin'), 'usersPerCaseMin')}
-                      {renderConfigRow(t('automation.usersPerCaseMax'), 'usersPerCaseMax')}
+                      {renderConfigRow(t('automation.runHour'), 'runHour', 'number', t('automation.hints.runHour'))}
+                      {renderConfigRow(t('automation.dailyCasesMin'), 'dailyCasesMin', 'number', t('automation.hints.dailyCasesMin'))}
+                      {renderConfigRow(t('automation.dailyCasesMax'), 'dailyCasesMax', 'number', t('automation.hints.dailyCasesMax'))}
+                      {renderConfigRow(t('automation.usersPerCaseMin'), 'usersPerCaseMin', 'number', t('automation.hints.usersPerCaseMin'))}
+                      {renderConfigRow(t('automation.usersPerCaseMax'), 'usersPerCaseMax', 'number', t('automation.hints.usersPerCaseMax'))}
                       {renderConfigRow(
                         t('automation.schedulingIntervalMin'),
-                        'schedulingIntervalMin'
+                        'schedulingIntervalMin',
+                        'number',
+                        t('automation.hints.schedulingIntervalMin')
                       )}
                       {renderConfigRow(
                         t('automation.schedulingIntervalMax'),
-                        'schedulingIntervalMax'
+                        'schedulingIntervalMax',
+                        'number',
+                        t('automation.hints.schedulingIntervalMax')
                       )}
                       {renderConfigRow(
                         t('automation.schedulingWindowHours'),
-                        'schedulingWindowHours'
+                        'schedulingWindowHours',
+                        'number',
+                        t('automation.hints.schedulingWindowHours')
                       )}
-                      {renderConfigRow(t('automation.intensityMin'), 'intensityMin')}
-                      {renderConfigRow(t('automation.intensityMax'), 'intensityMax')}
-                      {renderConfigRow(t('automation.dailyPoolSize'), 'dailyPoolSize')}
+                      {renderConfigRow(t('automation.intensityMin'), 'intensityMin', 'number', t('automation.hints.intensityMin'))}
+                      {renderConfigRow(t('automation.intensityMax'), 'intensityMax', 'number', t('automation.hints.intensityMax'))}
+                      {renderConfigRow(t('automation.dailyPoolSize'), 'dailyPoolSize', 'number', t('automation.hints.dailyPoolSize'))}
                       <div className="h-px bg-border-main/10 my-2" />
-                      {renderConfigRow(t('automation.rssFeedUrls'), 'rssFeedUrls', 'array')}
+                      {renderConfigRow(t('automation.rssFeedUrls'), 'rssFeedUrls', 'array', t('automation.hints.rssFeedUrls'))}
                       <div className="pt-2 flex justify-end">
                         <button
                           type="button"
@@ -580,7 +629,10 @@ export const AutomationPage: React.FC = () => {
                   animate={{ opacity: 1 }}
                   exit={{ opacity: 0 }}
                   className="fixed inset-0 z-50 bg-black/70 flex items-end md:items-center justify-center"
-                  onClick={() => setActiveRunId(null)}
+                  onClick={() => {
+                    setActiveRunId(null);
+                    clearRunDetail();
+                  }}
                 >
                   <motion.div
                     initial={{ y: 40, opacity: 0 }}
@@ -595,7 +647,10 @@ export const AutomationPage: React.FC = () => {
                       </h3>
                       <button
                         type="button"
-                        onClick={() => setActiveRunId(null)}
+                        onClick={() => {
+                          setActiveRunId(null);
+                          clearRunDetail();
+                        }}
                         className="p-1.5 rounded-full hover:bg-white/10 text-text-muted"
                       >
                         <X className="w-5 h-5" />
@@ -626,13 +681,24 @@ export const AutomationPage: React.FC = () => {
                   </motion.div>
                 </motion.div>
               )}
-            </AnimatePresence>
-          </>
-        )}
-      </div>
-    </PageLayout>
-  );
-};
+</AnimatePresence>
+           </>
+         )}
+       </div>
+       <ConfirmModal
+         isOpen={confirmRun}
+         onConfirm={handleConfirmRun}
+         onCancel={() => setConfirmRun(false)}
+         isLoading={isTriggeringRun}
+         variant="warning"
+         title={t('automation.confirmRun.title')}
+         message={t('automation.confirmRun.message')}
+         confirmLabel={t('automation.confirmRun.confirm')}
+         cancelLabel={t('automation.confirmRun.cancel')}
+       />
+     </PageLayout>
+   );
+ };
 
 function StatRow({ label, value }: { label: string; value: string | number }) {
   return (
