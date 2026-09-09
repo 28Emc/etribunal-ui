@@ -4,7 +4,7 @@ import { TrendingUp, MessageSquare, Scale, Loader2 } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 import { apiClient, authStorage, getCircuitState } from '@api/client';
 import { getDisplayName, getAnonymousAvatar } from '@services/anonymity';
-import { cn, formatNumber, createSlug } from '@utils/helpers';
+import { cn, formatNumber } from '@utils/helpers';
 import { ConfirmModal } from '@shared/components/ConfirmModal';
 import { UserCard } from '@shared/components/UserCard';
 import { ReactionIcon } from '@shared/components/ReactionIcon';
@@ -13,6 +13,7 @@ import { Skeleton, TrendingCaseSkeleton, UserCardSkeleton } from '@shared/compon
 interface TrendingCase {
   id: string;
   title: string;
+  slug?: string | null;
   category: string;
   votes_a: number;
   votes_b: number;
@@ -187,8 +188,8 @@ export const TrendingSidebar: React.FC<TrendingSidebarProps> = React.memo(({
           ) : trendingCases.length > 0 ? (
             trendingCases.map((c, i) => {
               const username = c.side_a_username || c.side_a_user?.username;
-              const caseUrl = username 
-                ? `/cases/${username}/${createSlug(c.title)}` 
+              const caseUrl = username && c.slug
+                ? `/cases/${username}/${encodeURIComponent(c.slug)}`
                 : `/cases/${c.id}`;
               return (
                 <motion.div

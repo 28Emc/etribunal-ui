@@ -141,6 +141,7 @@ export interface CaseComment {
 export interface Case {
   id: string;
   title: string;
+  slug?: string | null;
   category: string;
 
   /** 'vote' = votación A/B, 'classic' = debate abierto */

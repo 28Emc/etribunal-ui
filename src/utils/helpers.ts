@@ -159,9 +159,16 @@ export function createSlug(text: string): string {
 export function getCasePath(caseData: {
   id: string;
   title?: string;
+  slug?: string | null;
   sideA?: { username?: string };
 }) {
   const username = caseData.sideA?.username?.trim();
+  const slug = caseData.slug?.trim();
+
+  if (username && slug) {
+    return `/cases/${encodeURIComponent(username)}/${encodeURIComponent(slug)}`;
+  }
+
   const title = caseData.title?.trim();
 
   if (username && title) {

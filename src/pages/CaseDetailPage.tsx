@@ -22,7 +22,8 @@ import { SEO } from '@components/ui/SEO';
 import { CaseDetailSkeleton } from '@components/ui/Skeleton';
 
 export function CaseDetailPage() {
-  const { id } = useParams<{ id?: string }>();
+  const params = useParams<{ id?: string; username?: string; slug?: string }>();
+  const caseIdentifier = params.id ?? params.username;
   const navigate = useNavigate();
   const { currentUser, token } = useAuth();
   const { t } = useTranslation();
@@ -59,14 +60,19 @@ export function CaseDetailPage() {
   const { addComment, deleteComment, fetchInitialComments, checkForNewComments, showNewComments, fetchOlderComments } = commentsHook;
   const { toggleSave } = useSavedCases();
 
+  // Determine the correct API endpoint based on route params
+  const isSlugRoute = !!params.slug;
+  const fetchCaseUrl = isSlugRoute 
+    ? `/cases/${params.username}/${params.slug}`
+    : `/cases/${caseIdentifier}`;
+
   useEffect(() => {
-    const caseIdentifier = id;
-    if (!caseIdentifier) return;
+    if (!caseIdentifier && !params.username) return;
 
     const fetchSingleCase = async () => {
       setIsLoading(true);
       try {
-        const caseRes = await apiClient.get<any>(`/cases/${caseIdentifier}`);
+        const caseRes = await apiClient.get<any>(fetchCaseUrl);
         
         await fetchInitialComments(caseRes.id);
         
@@ -82,7 +88,7 @@ export function CaseDetailPage() {
       }
     };
     fetchSingleCase();
-  }, [id, currentUser?.id, fetchInitialComments]);
+  }, [fetchCaseUrl, currentUser?.id, fetchInitialComments]);
 
   useEffect(() => {
     if (!caseData?.id) return;
@@ -361,7 +367,7 @@ if (isLoading) {
       title={caseData?.title || t('cases.caseDetails')}
       description={caseData?.sideA.story || undefined}
       image={caseData?.sideA.evidence?.[0]?.url || caseData?.sideB.evidence?.[0]?.url || undefined}
-      url={`${import.meta.env.VITE_APP_URL || 'http://localhost:3000'}/cases/${caseData?.id || id}`}
+      url={`${import.meta.env.VITE_APP_URL || 'http://localhost:3000'}/cases/${caseData?.id || caseIdentifier}`}
       jsonLd={{
         '@context': 'https://schema.org',
         '@type': 'Article',

@@ -168,6 +168,7 @@ export const mapDbCaseToCase = (
   return {
     id: dbCase.id,
     title: dbCase.title,
+    slug: dbCase.slug || null,
     category: dbCase.category || 'Other',
 
     // Asegurar que type y status sean valores válidos
@@ -266,7 +267,10 @@ export const mapDbCaseToCase = (
       dbCase.sharesCount ||
       0,
     commentsCount:
-      dbCase.comments_count || dbCase.commentsCount || 0,
+      dbCase.total_comments ??
+      dbCase.comments_count ??
+      dbCase.commentsCount ??
+      0,
 
     // Comentarios (mapeados recursivamente)
     comments: (dbCase.comments || []).map((c: any) =>
