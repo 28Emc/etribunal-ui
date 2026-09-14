@@ -179,7 +179,8 @@ export function FeedPage({ initialTab = 'for_you' }: FeedPageProps) {
         updateCase(caseId, {
           votesA: data.votes_a,
           votesB: data.votes_b,
-          votesBothWrong: data.votes_both_wrong
+          votesBothWrong: data.votes_both_wrong,
+          userVote: apiSide as 'A' | 'B' | 'BOTH_WRONG'
         });
       }
     } catch (error) {

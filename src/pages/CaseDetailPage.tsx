@@ -117,7 +117,8 @@ export function CaseDetailPage() {
           ...prev,
           votesA: res.votes_a,
           votesB: res.votes_b,
-          votesBothWrong: res.votes_both_wrong
+          votesBothWrong: res.votes_both_wrong,
+          userVote: voteSide
         } : prev);
         if (currentUser) {
           currentUser.votes = {

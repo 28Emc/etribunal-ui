@@ -19,6 +19,9 @@ interface TrendingCase {
   votes_b: number;
   votes_both_wrong: number;
   _count?: { comments: number; reactions: number };
+  total_comments?: number;
+  comments_count?: number;
+  total_reactions?: number;
   reactions_summary?: { counts: { LIKE: number; LOVE: number; ANGRY: number } };
   side_a_user: { username: string; is_anonymous: boolean; id: string };
   side_a_username?: string;
@@ -204,7 +207,7 @@ export const TrendingSidebar: React.FC<TrendingSidebarProps> = React.memo(({
                   </div>
                   <h4 className={isMobile ? "font-black text-sm leading-tight italic uppercase tracking-tighter text-text-main group-hover:text-primary transition-colors mb-2" : "font-black text-lg leading-tight italic uppercase tracking-tighter text-text-main group-hover:text-primary transition-colors mb-2"}>{c.title}</h4>
                   <div className="flex items-center gap-3 text-[10px] font-bold text-text-muted uppercase tracking-widest">
-                    <span className="flex items-center gap-1"><MessageSquare className="w-3 h-3" /> {formatNumber(c._count?.comments || 0)}</span>
+                    <span className="flex items-center gap-1"><MessageSquare className="w-3 h-3" /> {formatNumber(c.total_comments ?? c.comments_count ?? c._count?.comments ?? 0)}</span>
                     {(c.reactions_summary?.counts?.LIKE ?? 0) > 0 && (
                       <span className="flex items-center gap-1"><ReactionIcon type="LIKE" size="sm" /> {formatNumber(c.reactions_summary?.counts?.LIKE ?? 0)}</span>
                     )}

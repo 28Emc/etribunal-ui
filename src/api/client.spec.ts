@@ -234,7 +234,7 @@ describe('interceptores', () => {
       await expect(secondPromise).resolves.not.toThrow();
     });
 
-    it('debería limpiar sesión y redirigir si refresh falla', async () => {
+    it('debería mantener sesión y no redirigir ante un fallo transitorio del refresh', async () => {
       const originalPath = window.location.pathname;
       Object.defineProperty(window, 'location', {
         value: { pathname: '/cases', href: '' },
@@ -243,7 +243,34 @@ describe('interceptores', () => {
 
       localStorage.setItem('etribunal_user', JSON.stringify({ id: 'test-user' }));
       localStorage.setItem('etribunal_refresh_token', 'test-refresh');
-      shared.axiosPost.mockRejectedValue(new Error('Refresh failed'));
+      localStorage.setItem('etribunal_access_token', 'old-token');
+      shared.axiosPost.mockRejectedValue(new Error('Network Error'));
+
+      const error: any = new Error('Unauthorized');
+      error.config = { url: '/cases', headers: {} };
+      error.response = { status: 401 };
+
+      await expect(shared.responseErrorHandler(error)).rejects.toThrow('Unauthorized');
+      expect(localStorage.getItem('etribunal_user')).not.toBeNull();
+      expect(window.location.href).toBe('');
+
+      Object.defineProperty(window, 'location', {
+        value: { pathname: originalPath, href: '' },
+        writable: true,
+      });
+    });
+
+    it('debería limpiar sesión y redirigir si el refresh es rechazado (401)', async () => {
+      const originalPath = window.location.pathname;
+      Object.defineProperty(window, 'location', {
+        value: { pathname: '/cases', href: '' },
+        writable: true,
+      });
+
+      localStorage.setItem('etribunal_user', JSON.stringify({ id: 'test-user' }));
+      localStorage.setItem('etribunal_refresh_token', 'test-refresh');
+      localStorage.setItem('etribunal_access_token', 'old-token');
+      shared.axiosPost.mockRejectedValue({ response: { status: 401 } });
 
       const error: any = new Error('Unauthorized');
       error.config = { url: '/cases', headers: {} };
@@ -251,6 +278,7 @@ describe('interceptores', () => {
 
       await expect(shared.responseErrorHandler(error)).rejects.toThrow('Unauthorized');
       expect(localStorage.getItem('etribunal_user')).toBeNull();
+      expect(window.location.href).toBe('/login');
 
       Object.defineProperty(window, 'location', {
         value: { pathname: originalPath, href: '' },

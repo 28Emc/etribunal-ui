@@ -181,6 +181,9 @@ export interface Case {
   /** Reacción del usuario actual */
   userReaction?: string | null;
 
+  /** Voto del usuario actual (null si no ha votado) */
+  userVote?: 'A' | 'B' | 'BOTH_WRONG' | null;
+
   /** Flags de interacción del usuario actual */
   isSaved?: boolean;
   isShared?: boolean;

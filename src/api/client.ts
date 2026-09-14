@@ -69,10 +69,19 @@ const STORAGE_KEYS = {
   ACCESS_TOKEN: 'etribunal_access_token',
   REFRESH_TOKEN: 'etribunal_refresh_token',
   USER: 'etribunal_user',
+  REMEMBER: 'etribunal_remember',
 } as const;
 
 function getItem(key: string): string | null {
   return sessionStorage.getItem(key) ?? localStorage.getItem(key);
+}
+
+/** Preferencia explícita de "recordarme" (localStorage, sobrevive a la pestaña) */
+function getRemembered(): boolean {
+  const flag = localStorage.getItem(STORAGE_KEYS.REMEMBER);
+  if (flag !== null) return flag === 'true';
+  // Legacy: si el access token vive en localStorage, la sesión era persistente
+  return localStorage.getItem(STORAGE_KEYS.ACCESS_TOKEN) !== null;
 }
 
 export const authStorage = {
@@ -95,19 +104,29 @@ export const authStorage = {
   },
 
   setTokens: (access: string, refresh?: string, remember?: boolean) => {
-    if (remember) {
+    // Bucket elegido: recordarme → localStorage, sesión → sessionStorage.
+    // Al escribir en un bucket se limpia el otro para que la copia vieja
+    // (shadow) no enmascare a la nueva vía getItem().
+    const remembered = remember ?? getRemembered();
+    if (remembered) {
+      sessionStorage.removeItem(STORAGE_KEYS.ACCESS_TOKEN);
+      sessionStorage.removeItem(STORAGE_KEYS.REFRESH_TOKEN);
       localStorage.setItem(STORAGE_KEYS.ACCESS_TOKEN, access);
       if (refresh) localStorage.setItem(STORAGE_KEYS.REFRESH_TOKEN, refresh);
     } else {
+      localStorage.removeItem(STORAGE_KEYS.ACCESS_TOKEN);
+      localStorage.removeItem(STORAGE_KEYS.REFRESH_TOKEN);
       sessionStorage.setItem(STORAGE_KEYS.ACCESS_TOKEN, access);
       if (refresh) sessionStorage.setItem(STORAGE_KEYS.REFRESH_TOKEN, refresh);
     }
+    localStorage.setItem(STORAGE_KEYS.REMEMBER, remembered ? 'true' : 'false');
   },
 
   clearSession: () => {
     localStorage.removeItem(STORAGE_KEYS.ACCESS_TOKEN);
     localStorage.removeItem(STORAGE_KEYS.REFRESH_TOKEN);
     localStorage.removeItem(STORAGE_KEYS.USER);
+    localStorage.removeItem(STORAGE_KEYS.REMEMBER);
     sessionStorage.removeItem(STORAGE_KEYS.ACCESS_TOKEN);
     sessionStorage.removeItem(STORAGE_KEYS.REFRESH_TOKEN);
     sessionStorage.removeItem(STORAGE_KEYS.USER);
@@ -161,11 +180,11 @@ function subscribeTokenRefresh(callback: (token: string) => void) {
 }
 
 /** Intenta renovar el token llamando al endpoint /auth/refresh */
-async function refreshAccessToken(): Promise<string | null> {
+async function refreshAccessToken(): Promise<{ token: string | null; authRejected: boolean }> {
   const userId = authStorage.getUserId();
   const refreshToken = authStorage.getRefreshToken();
 
-  if (!userId || !refreshToken) return null;
+  if (!userId || !refreshToken) return { token: null, authRejected: true };
 
   try {
     const response = await axios.post(`${API_URL}/auth/refresh`, {
@@ -179,16 +198,20 @@ async function refreshAccessToken(): Promise<string | null> {
       response.data?.data ?? {};
 
     if (access_token) {
-      // Persistir en el mismo storage que los tokens originales
-      const wasRemembered = !!localStorage.getItem(STORAGE_KEYS.ACCESS_TOKEN);
-      authStorage.setTokens(access_token, newRefreshToken, wasRemembered);
-      return access_token;
+      // Persistir en el storage de la preferencia "recordarme" (no inferida)
+      authStorage.setTokens(access_token, newRefreshToken, getRemembered());
+      return { token: access_token, authRejected: false };
     }
 
-    return null;
+    return { token: null, authRejected: true };
   } catch (error) {
+    // Solo consideramos inválida la sesión si el backend RECHAZÓ el refresh
+    // (401/403). Errores de red/timeout/5xx no deben cerrar sesión: un blip
+    // transitorio no puede echar al usuario.
+    const status = (error as AxiosError)?.response?.status;
+    const authRejected = status === 401 || status === 403;
     console.error('[auth] Token refresh failed:', error);
-    return null;
+    return { token: null, authRejected };
   }
 }
 
@@ -228,10 +251,13 @@ _apiClient.interceptors.response.use(
       !originalRequest._retry
     ) {
       if (isRefreshing) {
-        // Ya hay un refresh en curso — encolar esta request
+        // Ya hay un refresh en curso — encolar esta request.
+        // Marcamos _retry para que un nuevo 401 (tras un refresh fallido)
+        // rechace limpio y no entre en un bucle de reintentos.
         return new Promise((resolve) => {
           subscribeTokenRefresh((newToken: string) => {
             originalRequest.headers.Authorization = `Bearer ${newToken}`;
+            originalRequest._retry = true;
             resolve(_apiClient(originalRequest));
           });
         });
@@ -241,7 +267,7 @@ _apiClient.interceptors.response.use(
       originalRequest._retry = true;
       isRefreshing = true;
 
-      const newToken = await refreshAccessToken();
+      const { token: newToken, authRejected } = await refreshAccessToken();
 
       if (newToken) {
         // Refresh exitoso: notificar a las requests encoladas
@@ -251,10 +277,16 @@ _apiClient.interceptors.response.use(
         // Reintentar la request original con el nuevo token
         originalRequest.headers.Authorization = `Bearer ${newToken}`;
         return _apiClient(originalRequest);
-      } else {
-        // Refresh falló: limpiar sesión
-        isRefreshing = false;
-        refreshSubscribers = [];
+      }
+
+      // Refresh falló: soltar las requests encoladas para que no queden colgadas
+      isRefreshing = false;
+      for (const callback of refreshSubscribers) callback('');
+      refreshSubscribers = [];
+
+      // Solo cerrar sesión si el backend REVOCÓ el refresh (401/403).
+      // Un fallo de red/5xx no debe desloguear al usuario.
+      if (authRejected) {
         authStorage.clearSession();
 
         // Redirigir al login si no estamos ya ahí

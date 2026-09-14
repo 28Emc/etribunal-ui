@@ -2,7 +2,7 @@
 
 Frontend React de **eTribunal**: plataforma de tribunales sociales donde la comunidad delibera, vota y comenta casos reales con dos lados (Side A / Side B).
 
-Migrado desde el proyecto existente en veredixo.com a una arquitectura Redux + Axios con PWA.
+Arquitectura **Redux + Axios** con PWA.
 
 ---
 
@@ -43,7 +43,7 @@ pnpm run test:coverage  # Cobertura (umbrales: 75% lines/functions/branches/stat
 Crear un archivo `.env` en la raíz (ver `.env.example`):
 
 ```env
-VITE_API_URL="http://localhost:8080/api"   # URL del API Gateway Spring (NUNCA el legacy NestJS :3001)
+VITE_API_URL="http://localhost:8080/api"   # URL del API Gateway Spring (microservicios eTribunal)
 VITE_APP_URL="http://localhost:3000"       # URL pública (SEO, shares, deep links)
 VITE_ENABLE_TRANSLATIONS="false"           # Feature flag: botones de traducción (false en prod)
 ```
@@ -118,8 +118,8 @@ Configurados en `vite.config.ts` y `tsconfig`:
 
 - **Interceptor de request**: inyecta `Authorization: Bearer <token>` automáticamente.
 - **Interceptor de response**: desempaqueta `ApiResponse.data` del backend (los hooks reciben el payload directo).
-- **Refresh queue**: ante `401`, renueva el access token vía `/auth/refresh`; las requests simultáneas se encolan y reintentan. Si el refresh falla → limpia sesión y redirige a `/login`.
-- **`authStorage`**: helpers de sesión sobre `sessionStorage`/`localStorage` (según "Recordarme").
+- **Refresh queue**: ante `401`, renueva el access token vía `/auth/refresh`; las requests simultáneas se encolan (flag `_retry`) y reintentan. Solo un refresh **rechazado** (HTTP 401/403, `authRejected`) limpia sesión y redirige a `/login`; los fallos transitorios (red/timeout/5xx) NO cierran la sesión.
+- **`authStorage`**: helpers de sesión sobre `sessionStorage`/`localStorage` según el flag `etribunal_remember`. El almacenamiento usa **un solo bucket**: remember → `localStorage`; sin recordar → `sessionStorage`; siempre se borra el otro bucket al escribir.
 
 ### Claves de almacenamiento
 
@@ -127,7 +127,8 @@ Configurados en `vite.config.ts` y `tsconfig`:
 |-------|-----|
 | `etribunal_access_token` / `etribunal_refresh_token` | Sesión JWT |
 | `etribunal_user` | Usuario persistido |
-| `etribunal_just_logged_in` | Evita refetch inmediato post-login |
+| `etribunal_remember` | Flag "Recordarme" — decide el bucket de almacenamiento (localStorage vs sessionStorage) |
+| `etribunal_just_logged_in` | Timestamp (válido solo 60s) que evita refetch inmediato justo tras el login; al recargar re-valida el perfil y sana el access token vía 401→refresh |
 | `etribunal_deep_link` | Ruta pendiente post-login (`/cases/:id`, `/users/:username`) |
 | `etribunal_invite_token` | Invitación Side B pendiente |
 | `etribunal_theme` | Tema dark/light |
@@ -177,7 +178,7 @@ npx vitest run src/path/x.spec.tsx   # un archivo
 
 ## 🔗 Backend
 
-El frontend consume la API del backend (puerto 3001). Formato de respuesta estándar:
+El frontend consume la API del **Gateway Spring de eTribunal** (`http://localhost:8080/api`, ver `.env`). Formato de respuesta estándar:
 
 ```typescript
 interface ApiResponse<T> {
@@ -189,6 +190,15 @@ interface ApiResponse<T> {
 
 `apiClient` ya desempaqueta `.data`, por lo que los hooks trabajan directamente con `T`.
 
+> ⚠️ **Media / CSP**: el CSP de `index.html` debe permitir el host de imágenes en `img-src`
+> (`http://localhost:* http://floci:*` en local; `https:` cubre los hosts de producción).
+> El backend arma las URLs públicas de S3 con `S3_PUBLIC_ENDPOINT` (nunca con el endpoint interno
+> del cliente S3), así que en la UI nunca deberían aparecer URLs `floci:4566`.
+>
+> ⚠️ **Local vs producción**: hosts como `localhost`/`floci:4566` y los flags de desarrollo solo
+> valen para **pruebas en local**. En producción la plataforma se despliega de otra forma
+> (infra real, dominios y CDN propios), por lo que esas URLs y configuraciones **no aplican**.
+
 ## 📝 Convenciones
 
 - Componentes: `PascalCase.tsx`; hooks: `useCamelCase.ts`.
@@ -199,4 +209,4 @@ interface ApiResponse<T> {
 
 ---
 
-*Última actualización: 2026-08-21*
+*Última actualización: 2026-09-13*

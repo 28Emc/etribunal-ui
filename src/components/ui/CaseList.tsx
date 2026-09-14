@@ -75,7 +75,7 @@ export const CaseList = memo(({
             onViewProfile={onViewProfile}
             onShare={onShare}
             onVote={onVote}
-            userVote={userVotes[caseData.id]}
+            userVote={caseData.userVote ?? userVotes[caseData.id]}
             isSaved={caseData.isSaved}
             anchorsCount={caseData.anchorsCount}
             sharesCount={caseData.sharesCount}
@@ -124,6 +124,7 @@ export const CaseList = memo(({
     const prevCase = prev.cases[i];
     const nextCase = next.cases[i];
     if (prevCase.id !== nextCase.id ||
+        prevCase.userVote !== nextCase.userVote ||
         (prevCase.anchorsCount ?? 0) !== (nextCase.anchorsCount ?? 0) ||
         (prevCase.sharesCount ?? 0) !== (nextCase.sharesCount ?? 0) ||
         prevCase.isSaved !== nextCase.isSaved ||

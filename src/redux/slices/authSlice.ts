@@ -64,8 +64,15 @@ export const initializeAuth = createAsyncThunk(
     try {
       const savedUser = localStorage.getItem('etribunal_user');
       const userId = authStorage.getUserId();
+      // El flag de "login reciente" solo se respeta durante 60s: si volvemos a
+      // la app después (pestaña rejuvenecida / page refresh), el perfil se
+      // refetchea y el interceptor renueva el access token si expiró. Evita
+      // quedarse con datos stale indefinidamente tras un refresh de página.
+      const justLoggedInTs = Number(
+        sessionStorage.getItem('etribunal_just_logged_in')
+      );
       const isJustLoggedIn =
-        sessionStorage.getItem('etribunal_just_logged_in') === 'true';
+        Number.isFinite(justLoggedInTs) && Date.now() - justLoggedInTs < 60_000;
 
       // Verificar si hay un login social pendiente en la URL
       const params = new URLSearchParams(window.location.search);
@@ -326,7 +333,7 @@ const authSlice = createSlice({
       }
 
       localStorage.setItem('etribunal_user', JSON.stringify(user));
-      sessionStorage.setItem('etribunal_just_logged_in', 'true');
+      sessionStorage.setItem('etribunal_just_logged_in', String(Date.now()));
     },
 
     /** clearAuth — Reset completo del estado */

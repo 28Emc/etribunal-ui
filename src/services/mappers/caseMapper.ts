@@ -250,6 +250,9 @@ export const mapDbCaseToCase = (
     reactions: dbCase.reactions_summary?.counts || reactionsMap,
     userReaction: dbCase.user_reaction || null,
 
+    // Voto del usuario actual (el backend lo devuelve cuando hay requester)
+    userVote: dbCase.user_vote || null,
+
     // Flags de interacción del usuario actual
     isSaved: dbCase.is_saved || dbCase.isSaved || false,
     isShared: dbCase.is_shared || dbCase.isShared || false,

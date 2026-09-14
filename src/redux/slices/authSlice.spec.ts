@@ -98,7 +98,7 @@ describe('authSlice', () => {
       const saved = localStorage.getItem('etribunal_user');
       expect(saved).toBeDefined();
       expect(JSON.parse(saved!).username).toBe('juanperez');
-      expect(sessionStorage.getItem('etribunal_just_logged_in')).toBe('true');
+      expect(sessionStorage.getItem('etribunal_just_logged_in')).toMatch(/^\d+$/);
     });
 
     it('debería cambiar idioma si el usuario tiene language diferente', () => {
@@ -332,7 +332,7 @@ describe('authSlice', () => {
 
     it('debería restaurar sesión desde localStorage sin fetch si isJustLoggedIn', async () => {
       localStorage.setItem('etribunal_user', JSON.stringify(mockUser));
-      sessionStorage.setItem('etribunal_just_logged_in', 'true');
+      sessionStorage.setItem('etribunal_just_logged_in', String(Date.now()));
       mocks.mockGetUserId.mockReturnValue('123');
 
       const store = createStore();

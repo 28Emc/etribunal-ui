@@ -159,7 +159,8 @@ export const CaseDetail: React.FC<CaseDetailProps> = ({
     };
   }, [commentsEndRef.current, hasMore, isFetching, visibleComments.length, fetchOlderComments, caseData?.id]);
 
-  const userVote = currentUser?.votes?.[caseData?.id || ''];
+  const userVote =
+    caseData?.userVote ?? currentUser?.votes?.[caseData?.id || ''];
   const hasVoted = !!userVote;
 
   const canCastVote = !hasVoted && !isCurrentUserSideA && !isCurrentUserSideB;
