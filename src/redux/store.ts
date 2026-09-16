@@ -23,15 +23,17 @@
 
 import { configureStore } from '@reduxjs/toolkit';
 import authReducer from './slices/authSlice';
-import casesReducer from './slices/casesSlice';
 import uiReducer from './slices/uiSlice';
+import { casesApi } from './services/casesApi';
 
 export const store = configureStore({
   reducer: {
     auth: authReducer,
-    cases: casesReducer,
     ui: uiReducer,
+    [casesApi.reducerPath]: casesApi.reducer,
   },
+  // Middleware de RTK Query para el cache de casos
+  middleware: (getDefaultMiddleware) => getDefaultMiddleware().concat(casesApi.middleware),
   // Activar DevTools solo en desarrollo
   devTools: import.meta.env.DEV,
 });

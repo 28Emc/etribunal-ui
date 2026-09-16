@@ -1,6 +1,14 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { render, screen, fireEvent } from '@testing-library/react';
+import { Provider } from 'react-redux';
+import { store } from '@redux/store';
 import { CreateCasePage } from './CreateCasePage';
+
+const renderWithStore = () => render(
+  <Provider store={store}>
+    <CreateCasePage />
+  </Provider>
+);
 
 vi.mock('react-i18next', () => ({
   useTranslation: () => ({
@@ -41,10 +49,6 @@ vi.mock('@api/client', () => ({
   },
 }));
 
-vi.mock('@hooks/useCases', () => ({
-  useCases: () => ({ setCases: vi.fn() }),
-}));
-
 vi.mock('@services/anonymity', () => ({
   getAnonymousAvatar: vi.fn(() => 'https://api.dicebear.com/avatar.svg'),
 }));
@@ -71,18 +75,18 @@ describe('CreateCasePage', () => {
   beforeEach(() => { vi.clearAllMocks(); });
 
   it('debería renderizar el toggle de anonimato con publishAs', () => {
-    render(<CreateCasePage />);
+    renderWithStore();
     expect(screen.getByText('cases.publishAs')).toBeInTheDocument();
   });
 
   it('debería mostrar userPublic y anonymous labels', () => {
-    render(<CreateCasePage />);
+    renderWithStore();
     expect(screen.getByText('cases.userPublic')).toBeInTheDocument();
     expect(screen.getByText('cases.anonymous')).toBeInTheDocument();
   });
 
   it('debería cambiar estado al hacer click en el toggle', () => {
-    render(<CreateCasePage />);
+    renderWithStore();
 
     const toggles = screen.getAllByRole('button').filter(
       (btn) => btn.className.includes('rounded-full') && btn.className.includes('cursor-pointer')
@@ -97,7 +101,7 @@ describe('CreateCasePage', () => {
   });
 
   it('debería invocar getAnonymousAvatar cuando se activa el modo anónimo', () => {
-    render(<CreateCasePage />);
+    renderWithStore();
 
     const toggles = screen.getAllByRole('button').filter(
       (btn) => btn.className.includes('rounded-full') && btn.className.includes('cursor-pointer')

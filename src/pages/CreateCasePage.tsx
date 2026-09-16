@@ -10,13 +10,14 @@ import { apiClient, authStorage } from '@api/client';
 import { Tooltip } from '@components/ui/Tooltip';
 import { PageLayout } from '@layout/PageLayout';
 import { SEO } from '@components/ui/SEO';
-import { useCases } from '@hooks/useCases';
 import { getAnonymousAvatar } from '@services/anonymity';
+import { useAppDispatch } from '@redux/hooks';
+import { prependCaseToFeed } from '@redux/services/casesApi';
 
 export function CreateCasePage() {
   const { t } = useTranslation();
   const navigate = useNavigate();
-  const { setCases } = useCases();
+  const dispatch = useAppDispatch();
   const { currentUser } = useAuth();
   
   const [title, setTitle] = useState('');
@@ -213,7 +214,7 @@ export function CreateCasePage() {
         createdAt: createdCase.created_at
       };
 
-      setCases(prev => [newCase, ...prev]);
+      dispatch(prependCaseToFeed(newCase));
 
       if (caseType === 'classic') {
         setShareLink('__classic_success__');

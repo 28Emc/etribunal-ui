@@ -8,44 +8,47 @@ import { TopJudgesList } from '@layout/TopJudgesList';
 import { FeedSkeleton, EmptyState } from '@components/ui';
 import { Tooltip } from '@components/ui/Tooltip';
 import { useAuth } from '@context/AuthContext';
-import { useCases } from '@hooks/useCases';
-import { useSavedCases } from '@hooks/useSavedCases';
-import { useVote } from '@hooks/useVote';
-import { useReactions } from '@hooks/useReactions';
 import { useComments } from '@hooks/useComments';
 import { useToast } from '@components/ui/Toast';
-import type { Case } from '@typings/index';
+import type { Case, FeedTab } from '@typings/index';
 import { apiClient } from '@api/client';
 import { ShareModal } from '@components/ui/ShareModal';
 import type { ShareType } from '@hooks/useShare';
 import { getCasePath } from '@utils/helpers';
 import { useInfiniteScroll } from '@hooks/useInfiniteScroll';
 import { SEO } from '@components/ui/SEO';
+import { useAppDispatch } from '@redux/hooks';
+import {
+  FEED_PAGE_SIZE,
+  incrementCaseShareCount,
+  useGetFeedQuery,
+  useVoteCaseMutation,
+  useSaveCaseMutation,
+  useReactToCaseMutation,
+  type FeedArgs,
+} from '@redux/services/casesApi';
 
 interface FeedPageProps {
   initialTab?: 'for_you' | 'following' | 'trending' | 'top-judges';
 }
 
+type FeedTabExtended = 'for_you' | 'following' | 'trending' | 'top-judges';
+
 export function FeedPage({ initialTab = 'for_you' }: FeedPageProps) {
   const { t } = useTranslation();
   const navigate = useNavigate();
+  const dispatch = useAppDispatch();
   const { currentUser, setCurrentUser } = useAuth();
-  
-  const { cases, isLoading, fetchCases, hasMore, loadMore, refreshCases, updateCase } = useCases();
-  const { toggleSave: toggleSaveCase } = useSavedCases();
-  const { voteForCase } = useVote();
-  const { toggleReaction: toggleCaseReaction } = useReactions();
+
   const { addComment } = useComments();
   const { addToast } = useToast();
-  
+
   const showToast = (msg: string, type: 'success' | 'error' | 'info' | 'warning') => addToast(type, msg);
 
-  const [activeTab, setActiveTab] = useState<'for_you' | 'following' | 'trending' | 'top-judges'>(initialTab);
-  const [selectedCategory, setSelectedCategory] = useState("All");
-  
-  const [isVoting, setIsVoting] = useState(false);
-  const [isSaving, setIsSaving] = useState(false);
-  
+  const [activeTab, setActiveTab] = useState<FeedTabExtended>(initialTab);
+  const [selectedCategory, setSelectedCategory] = useState('All');
+  const [skip, setSkip] = useState(0);
+
   const [topJudgesCases, setTopJudgesCases] = useState<any[]>([]);
   const [isLoadingTopJudges, setIsLoadingTopJudges] = useState(false);
   const [inviteNotice, setInviteNotice] = useState<string | null>(null);
@@ -55,8 +58,29 @@ export function FeedPage({ initialTab = 'for_you' }: FeedPageProps) {
   const feedScrollRef = useRef<HTMLDivElement | null>(null);
   const FEED_SCROLL_KEY = 'etribunal_feed_scroll';
 
+  const isTopJudges = activeTab === 'top-judges';
+
+  // ============================================================
+  // Feed — RTK Query (fuente de verdad única)
+  // ============================================================
+  const feedArgs: FeedArgs = {
+    tab: (isTopJudges ? 'for_you' : activeTab) as FeedTab,
+    category: selectedCategory,
+    q: '',
+    skip,
+  };
+  const { data, isLoading, isFetching, refetch } = useGetFeedQuery(feedArgs, { skip: isTopJudges });
+  const cases = data?.cases ?? [];
+  const hasMore = data?.hasMore ?? false;
+
+  const [voteCase, { isLoading: isVotePending }] = useVoteCaseMutation();
+  const [saveCase, { isLoading: isSavePending }] = useSaveCaseMutation();
+  const [reactToCase] = useReactToCaseMutation();
+
+  const feedLoaded = !!data && cases.length > 0;
+
   useEffect(() => {
-    if (!isLoading && cases.length > 0) {
+    if (feedLoaded) {
       const savedScroll = sessionStorage.getItem(FEED_SCROLL_KEY);
       if (savedScroll && feedScrollRef.current) {
         const timer = setTimeout(() => {
@@ -67,7 +91,7 @@ export function FeedPage({ initialTab = 'for_you' }: FeedPageProps) {
         return () => clearTimeout(timer);
       }
     }
-  }, [isLoading, cases.length]);
+  }, [feedLoaded]);
 
   const saveFeedScroll = () => {
     if (feedScrollRef.current) {
@@ -77,6 +101,7 @@ export function FeedPage({ initialTab = 'for_you' }: FeedPageProps) {
 
   useEffect(() => {
     setActiveTab(initialTab);
+    setSkip(0);
   }, [initialTab]);
 
   const fetchTopJudges = React.useCallback(async () => {
@@ -92,42 +117,26 @@ export function FeedPage({ initialTab = 'for_you' }: FeedPageProps) {
     }
   }, []);
 
-  const prevTabRef = useRef(activeTab);
-  const prevCategoryRef = useRef(selectedCategory);
-  const initialFetchDone = useRef(false);
-
   useEffect(() => {
-    const tabChanged = prevTabRef.current !== activeTab;
-    const categoryChanged = prevCategoryRef.current !== selectedCategory;
-
-    if (tabChanged || categoryChanged) {
-      sessionStorage.removeItem(FEED_SCROLL_KEY);
-      if (feedScrollRef.current) {
-        feedScrollRef.current.scrollTop = 0;
-      }
-      
-      prevTabRef.current = activeTab;
-      prevCategoryRef.current = selectedCategory;
-      
-      if (activeTab === 'top-judges') {
-        fetchTopJudges();
-      } else {
-        fetchCases(0, activeTab, selectedCategory, '');
-      }
-    } else if (!initialFetchDone.current) {
-      initialFetchDone.current = true;
-      if (activeTab === 'top-judges') {
-        fetchTopJudges();
-      } else {
-        fetchCases(0, activeTab, selectedCategory, '');
-      }
+    if (isTopJudges) {
+      fetchTopJudges();
     }
-  }, [activeTab, selectedCategory, fetchCases, fetchTopJudges]);
+  }, [isTopJudges, fetchTopJudges]);
+
+  const handleLoadMore = React.useCallback(() => {
+    if (!hasMore || isFetching) return;
+    setSkip((prev) => prev + FEED_PAGE_SIZE);
+  }, [hasMore, isFetching]);
+
+  const handleCategoryChange = React.useCallback((category: string) => {
+    setSelectedCategory(category);
+    setSkip(0);
+  }, []);
 
   const { loadMoreRef } = useInfiniteScroll({
-    onLoadMore: loadMore,
+    onLoadMore: handleLoadMore,
     hasMore,
-    isLoading
+    isLoading: isFetching,
   });
 
   const openAuthModal = () => {
@@ -137,6 +146,7 @@ export function FeedPage({ initialTab = 'for_you' }: FeedPageProps) {
   const handleSelectCase = React.useCallback((caseData: Case | string) => {
     if (typeof caseData === 'string' && (caseData === 'trending' || caseData === 'top-judges')) {
       setActiveTab(caseData);
+      setSkip(0);
       window.scrollTo({ top: 0, behavior: 'smooth' });
       return;
     }
@@ -163,32 +173,20 @@ export function FeedPage({ initialTab = 'for_you' }: FeedPageProps) {
       return;
     }
 
-    setIsVoting(true);
+    const apiSide = side === 'BothWrong' ? 'BOTH_WRONG' : side;
     try {
-      const apiSide = side === 'BothWrong' ? 'BOTH_WRONG' : side;
-      const data = await voteForCase(caseId, apiSide);
-      
+      await voteCase({ caseId, voteType: apiSide }).unwrap();
+
       const updatedUser = {
         ...currentUser,
         votes: { ...currentUser.votes, [caseId]: apiSide as 'A' | 'B' | 'BOTH_WRONG' }
       };
       setCurrentUser(updatedUser);
       localStorage.setItem('etribunal_user', JSON.stringify(updatedUser));
-      
-      if (data) {
-        updateCase(caseId, {
-          votesA: data.votes_a,
-          votesB: data.votes_b,
-          votesBothWrong: data.votes_both_wrong,
-          userVote: apiSide as 'A' | 'B' | 'BOTH_WRONG'
-        });
-      }
     } catch (error) {
       console.error('Error voting:', error);
-    } finally {
-      setIsVoting(false);
     }
-  }, [currentUser, voteForCase, setCurrentUser, updateCase]);
+  }, [currentUser, voteCase, setCurrentUser]);
 
   const handleToggleSave = React.useCallback(async (caseId: string) => {
     if (!currentUser) {
@@ -199,57 +197,33 @@ export function FeedPage({ initialTab = 'for_you' }: FeedPageProps) {
     const currentCase = cases.find(c => c.id === caseId);
     const wasSaved = currentCase?.isSaved;
 
-    setIsSaving(true);
     try {
-      const result = await toggleSaveCase(caseId);
+      await saveCase({ caseId }).unwrap();
       showToast(wasSaved ? t('toasts.caseUnanchored') : t('toasts.caseAnchored'), 'success');
-      
-      if (result !== undefined) {
-        updateCase(caseId, {
-          isSaved: result.saved,
-          anchorsCount: result.anchorsCount
-        });
-      }
     } catch (error) {
       console.error('Error toggling save:', error);
       showToast(t('toasts.errorProcessingAnchor'), 'error');
-    } finally {
-      setIsSaving(false);
     }
-  }, [currentUser, cases, toggleSaveCase, t, updateCase]);
+  }, [currentUser, cases, saveCase, t]);
 
   const handleReaction = React.useCallback(async (
-    caseId: string, 
-    emoji: 'LIKE' | 'LOVE' | 'ANGRY', 
-    targetType: 'CASE' | 'COMMENT' = 'CASE', 
+    caseId: string,
+    emoji: 'LIKE' | 'LOVE' | 'ANGRY',
+    targetType: 'CASE' | 'COMMENT' = 'CASE',
     targetId?: string
   ) => {
     if (!currentUser) {
       openAuthModal();
       return;
     }
-    
-    try {
-      const data = await toggleCaseReaction(targetType, targetId || caseId, emoji);
-      
-      if (data && targetType === 'CASE') {
-        const formattedReactions = { LIKE: 0, LOVE: 0, ANGRY: 0 };
-        data.reactions.forEach((r: any) => {
-          if ((formattedReactions as any)[r.emoji] !== undefined) {
-             (formattedReactions as any)[r.emoji] = r.count;
-          }
-        });
 
-        updateCase(caseId, {
-          reactions: formattedReactions,
-          userReaction: data.user_reaction
-        });
-      }
+    try {
+      await reactToCase({ targetType, targetId: targetId || caseId, emoji }).unwrap();
     } catch (error) {
       console.error('Error toggling reaction:', error);
       showToast(t('toasts.errorProcessingReaction'), 'error');
     }
-  }, [currentUser, toggleCaseReaction, updateCase, t]);
+  }, [currentUser, reactToCase, t]);
 
   const handleFollowUser = async (userId: string, username: string) => {
     if (!currentUser) return;
@@ -269,26 +243,22 @@ export function FeedPage({ initialTab = 'for_you' }: FeedPageProps) {
     }
     try {
       await addComment(caseId, text, parentId);
-      await refreshCases();
+      await refetch();
       showToast(t('toasts.verdictSentSuccess'), 'success');
     } catch (error) {
       console.error('Error adding verdict:', error);
       showToast(t('toasts.errorAddingVerdict'), 'error');
     }
-  }, [currentUser, addComment, refreshCases, t]);
+  }, [currentUser, addComment, refetch, t]);
 
   const handleShareClose = React.useCallback(() => {
     setShowShareModal(false);
     if (pendingShareId) {
-      const caseItem = cases.find(c => c.id === pendingShareId);
-      if (caseItem) {
-        updateCase(pendingShareId, {
-          sharesCount: (caseItem.sharesCount || 0) + 1
-        });
-      }
+      const caseId = pendingShareId;
+      dispatch(incrementCaseShareCount(caseId));
       setPendingShareId(null);
     }
-  }, [pendingShareId, cases, updateCase]);
+  }, [dispatch, pendingShareId]);
 
   const handleShareOpen = React.useCallback((caseId: string) => {
     const c = cases.find(item => item.id === caseId);
@@ -344,14 +314,14 @@ export function FeedPage({ initialTab = 'for_you' }: FeedPageProps) {
         )}
       </AnimatePresence>
 
-      {activeTab !== 'top-judges' && (
+      {!isTopJudges && (
         <CategoryFilter
           selectedCategory={selectedCategory}
-          onCategoryChange={setSelectedCategory}
+          onCategoryChange={handleCategoryChange}
         />
       )}
 
-      {activeTab !== 'top-judges' && (
+      {!isTopJudges && (
 <motion.div
           initial={{ opacity: 0, y: 10 }}
           animate={{ opacity: 1, y: 0 }}
@@ -368,7 +338,7 @@ export function FeedPage({ initialTab = 'for_you' }: FeedPageProps) {
       )}
 
       <div className="space-y-5 px-0">
-        {activeTab === 'top-judges' ? (
+        {isTopJudges ? (
           <TopJudgesList
             judges={topJudgesCases}
             isLoading={isLoadingTopJudges}
@@ -390,14 +360,14 @@ export function FeedPage({ initialTab = 'for_you' }: FeedPageProps) {
               onToggleSave={handleToggleSave}
               onReaction={handleReaction}
               onAddComment={handleAddComment}
-              isVoting={isVoting}
-              isSaving={isSaving}
-              isLoading={isLoading}
+              isVoting={isVotePending}
+              isSaving={isSavePending}
+              isLoading={isFetching}
               hasMore={hasMore}
               onOpenAuth={openAuthModal}
             />
             <div ref={loadMoreRef} className="h-10 w-full flex items-center justify-center">
-              {isLoading && (
+              {isFetching && (
                 <div className="w-5 h-5 border-2 border-primary/30 border-t-primary rounded-full animate-spin" />
               )}
             </div>
