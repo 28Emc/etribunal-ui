@@ -16,6 +16,7 @@
  *   PUT  /comments/:commentId               { content }            → CommentResponse
  *   DELETE /comments/:commentId             → void
  *   GET  /comments/:commentId/replies       → CommentResponse[]
+ *   POST /reactions                         { target_type: 'COMMENT', target_id, emoji } → ReactionSummary
  *
  * ¿Cómo funciona la paginación por cursor?
  *   - Una sola entrada de cache por caseId (serializeQueryArgs).
@@ -38,6 +39,7 @@ import { authStorage } from '@api/client';
 import type { CaseComment } from '@typings/index';
 import { mapDbCommentToComment } from '@services/mappers/caseMapper';
 import { baseQuery } from './rtkApiClient';
+import { toReactionCounts, type ReactionEmoji, type ReactionPayload } from './reactionContract';
 
 // ============================================================
 // Constantes
@@ -246,6 +248,37 @@ export const commentsApi = createApi({
     }),
 
     /**
+     * Reaccionar a un comentario (target_type COMMENT). Al completar,
+     * actualiza reactions + userReaction en TODAS las entradas de cache
+     * de getComments (top-level o anidado en replies), reutilizando
+     * updateMatchingComment.
+     */
+    reactToComment: builder.mutation<
+      ReactionPayload,
+      { commentId: string; emoji: ReactionEmoji }
+    >({
+      query: ({ commentId, emoji }) => ({
+        url: '/reactions',
+        method: 'POST',
+        body: { target_type: 'COMMENT', target_id: commentId, emoji },
+      }),
+      async onQueryStarted({ commentId }, { dispatch, queryFulfilled }) {
+        try {
+          const { data } = await queryFulfilled;
+          const reactions = toReactionCounts(data.reactions);
+          dispatch(
+            updateMatchingComment(commentId, (draft) => {
+              draft.reactions = reactions;
+              draft.userReaction = data.user_reaction;
+            })
+          );
+        } catch {
+          // El error se propaga al caller; la cache queda sin cambios.
+        }
+      },
+    }),
+
+    /**
      * Respuestas de un comentario (1 nivel de profundidad).
      */
     getReplies: builder.query<CaseComment[], string>({
@@ -358,5 +391,6 @@ export const {
   useAddCommentMutation,
   useUpdateCommentMutation,
   useDeleteCommentMutation,
+  useReactToCommentMutation,
   useGetRepliesQuery,
 } = commentsApi;

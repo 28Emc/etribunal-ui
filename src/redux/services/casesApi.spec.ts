@@ -225,7 +225,7 @@ describe('casesApi — mutaciones (actualizan la cache del feed)', () => {
     expect(updated?.anchorsCount).toBe(7);
   });
 
-  it('reactToCase debería normalizar reacciones y marcar userReaction', async () => {
+  it('reactToCase debería enviar POST /reactions y normalizar en la cache', async () => {
     const store = await storeWithCase('c1');
     mockRequest.mockResolvedValueOnce({
       reactions: [
@@ -236,39 +236,22 @@ describe('casesApi — mutaciones (actualizan la cache del feed)', () => {
     });
 
     await store.dispatch(
-      casesApi.endpoints.reactToCase.initiate({
-        targetType: 'CASE',
-        targetId: 'c1',
-        emoji: 'LIKE',
-      })
+      casesApi.endpoints.reactToCase.initiate({ caseId: 'c1', emoji: 'LIKE' })
     );
     await flush();
+
+    expect(mockRequest).toHaveBeenCalledWith(
+      expect.objectContaining({
+        url: '/reactions',
+        method: 'POST',
+        data: { target_type: 'CASE', target_id: 'c1', emoji: 'LIKE' },
+      })
+    );
 
     const { data } = selectFeed()(store.getState());
     const updated = data?.cases.find((c) => c.id === 'c1');
     expect(updated?.reactions).toEqual({ LIKE: 3, LOVE: 1, ANGRY: 0 });
     expect(updated?.userReaction).toBe('LIKE');
-  });
-
-  it('reactToCase hacia un comentario no debería tocar la cache de casos', async () => {
-    const store = await storeWithCase('c1');
-    mockRequest.mockResolvedValueOnce({
-      reactions: [{ emoji: 'LIKE', count: 1 }],
-      user_reaction: null,
-    });
-
-    await store.dispatch(
-      casesApi.endpoints.reactToCase.initiate({
-        targetType: 'COMMENT',
-        targetId: 'comment-1',
-        emoji: 'LIKE',
-      })
-    );
-    await flush();
-
-    const { data } = selectFeed()(store.getState());
-    expect(data?.cases[0].reactions).toEqual({ LIKE: 0, LOVE: 0, ANGRY: 0 });
-    expect(data?.cases[0].userReaction).toBeNull();
   });
 });
 

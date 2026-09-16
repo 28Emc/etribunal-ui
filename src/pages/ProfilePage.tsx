@@ -20,9 +20,8 @@ import type { ShareType } from '@hooks/useShare';
 import { useInfiniteScroll } from '@shared/hooks/useInfiniteScroll';
 import { SEO } from '@shared/components/SEO';
 import { CaseCard } from '@components/ui/CaseCard';
-import { useVote } from '@hooks/useVote';
+import { useVoteCaseMutation, useReactToCaseMutation } from '@redux/services/casesApi';
 import { useSavedCases } from '@hooks/useSavedCases';
-import { useReactions } from '@hooks/useReactions';
 import { useAddCommentMutation } from '@redux/services/commentsApi';
 
 export const ProfilePage: React.FC = () => {
@@ -30,10 +29,10 @@ export const ProfilePage: React.FC = () => {
   const navigate = useNavigate();
   const { t } = useTranslation();
   const { addToast } = useToast();
-  const { currentUser, logout } = useAuth();
-  const { voteForCase } = useVote();
+  const { currentUser, logout, setCurrentUser } = useAuth();
+  const [voteCase] = useVoteCaseMutation();
   const { toggleSave: toggleSaveCase } = useSavedCases();
-  const { toggleReaction: toggleCaseReaction } = useReactions();
+  const [reactToCase] = useReactToCaseMutation();
   const [addComment] = useAddCommentMutation();
 
   const targetUsername = username || currentUser?.name;
@@ -305,20 +304,25 @@ export const ProfilePage: React.FC = () => {
     setIsVoting(true);
     try {
       const apiSide = side === 'BothWrong' ? 'BOTH_WRONG' : side;
-      const data = await voteForCase(caseId, apiSide);
-      if (data) {
-        updateCaseInProfile(caseId, {
-          votesA: data.votes_a,
-          votesB: data.votes_b,
-          votesBothWrong: data.votes_both_wrong,
-        });
-      }
+      const data = await voteCase({ caseId, voteType: apiSide }).unwrap();
+      updateCaseInProfile(caseId, {
+        votesA: data.votes_a,
+        votesB: data.votes_b,
+        votesBothWrong: data.votes_both_wrong,
+        userVote: data.vote_type,
+      });
+      const updatedUser = {
+        ...currentUser,
+        votes: { ...currentUser.votes, [caseId]: apiSide }
+      };
+      setCurrentUser(updatedUser);
+      localStorage.setItem('etribunal_user', JSON.stringify(updatedUser));
     } catch (error) {
       console.error('Error voting:', error);
     } finally {
       setIsVoting(false);
     }
-  }, [currentUser, voteForCase, updateCaseInProfile, navigate]);
+  }, [currentUser, voteCase, setCurrentUser, updateCaseInProfile, navigate]);
 
   const handleToggleSave = useCallback(async (caseId: string) => {
     if (!currentUser) { navigate('/login'); return; }
@@ -342,25 +346,23 @@ export const ProfilePage: React.FC = () => {
     if (!currentUser) { navigate('/login'); return; }
     setIsReacting(true);
     try {
-      const data = await toggleCaseReaction('CASE', caseId, emoji);
-      if (data) {
-        const formattedReactions = { LIKE: 0, LOVE: 0, ANGRY: 0 };
-        data.reactions.forEach((r: any) => {
-          if ((formattedReactions as any)[r.emoji] !== undefined) {
-            (formattedReactions as any)[r.emoji] = r.count;
-          }
-        });
-        updateCaseInProfile(caseId, {
-          reactions: formattedReactions,
-          userReaction: data.user_reaction,
-        });
-      }
+      const data = await reactToCase({ caseId, emoji }).unwrap();
+      const formattedReactions = { LIKE: 0, LOVE: 0, ANGRY: 0 };
+      data.reactions.forEach((r) => {
+        if (formattedReactions[r.emoji] !== undefined) {
+          formattedReactions[r.emoji] = r.count;
+        }
+      });
+      updateCaseInProfile(caseId, {
+        reactions: formattedReactions,
+        userReaction: data.user_reaction,
+      });
     } catch (error) {
       console.error('Error reacting:', error);
     } finally {
       setIsReacting(false);
     }
-  }, [currentUser, toggleCaseReaction, updateCaseInProfile, navigate]);
+  }, [currentUser, reactToCase, updateCaseInProfile, navigate]);
 
   const handleAddComment = useCallback(async (caseId: string, text: string) => {
     if (!currentUser) { navigate('/login'); return; }

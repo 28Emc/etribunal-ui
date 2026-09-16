@@ -8,13 +8,13 @@ import { DeleteCaseModal } from '@components/ui/DeleteCaseModal';
 import { EditImagesModal } from '@components/ui/EditImagesModal';
 import { EditCaseModal, type EditCasePayload } from '@components/ui/EditCaseModal';
 import { useAuth } from '@context/AuthContext';
-import { useVote } from '@hooks/useVote';
-import { useReactions } from '@hooks/useReactions';
+import { useVoteCaseMutation, useReactToCaseMutation } from '@redux/services/casesApi';
+import { useReactToCommentMutation } from '@redux/services/commentsApi';
 import { useCommentsData } from '@hooks/useCommentsData';
 import { useSavedCases } from '@hooks/useSavedCases';
 import { apiClient } from '@api/client';
 import { mapDbCaseToCase } from '@shared/utils/caseMapper';
-import type { Case, CaseComment } from '@typings/index';
+import type { Case } from '@typings/index';
 import { useToast } from '@components/ui/Toast';
 import { useTranslation } from 'react-i18next';
 import { PageLayout } from '@layout/PageLayout';
@@ -25,7 +25,7 @@ export function CaseDetailPage() {
   const params = useParams<{ id?: string; username?: string; slug?: string }>();
   const caseIdentifier = params.id ?? params.username;
   const navigate = useNavigate();
-  const { currentUser, token } = useAuth();
+  const { currentUser, token, setCurrentUser } = useAuth();
   const { t } = useTranslation();
   const { addToast } = useToast();
 
@@ -54,8 +54,9 @@ export function CaseDetailPage() {
   const isUnderReview = isReported && caseData?.moderation_status === 'FLAGGED';
   const isResolved = caseData?.report_status === 'RESOLVED';
 
-  const { voteForCase } = useVote();
-  const { toggleReaction } = useReactions();
+  const [voteCase] = useVoteCaseMutation();
+  const [reactToCase] = useReactToCaseMutation();
+  const [reactToComment] = useReactToCommentMutation();
   const commentsData = useCommentsData(caseData?.id);
   const {
     addComment,
@@ -103,8 +104,8 @@ export function CaseDetailPage() {
     setIsVoting(true);
     try {
       const voteSide = side === 'BothWrong' ? 'BOTH_WRONG' : side;
-      const res = await voteForCase(caseId, voteSide);
-      if (res && caseData) {
+      const res = await voteCase({ caseId, voteType: voteSide }).unwrap();
+      if (caseData) {
         setCaseData(prev => prev ? {
           ...prev,
           votesA: res.votes_a,
@@ -113,10 +114,15 @@ export function CaseDetailPage() {
           userVote: voteSide
         } : prev);
         if (currentUser) {
-          currentUser.votes = {
-            ...currentUser.votes,
-            [caseId]: voteSide
+          const updatedUser = {
+            ...currentUser,
+            votes: {
+              ...currentUser.votes,
+              [caseId]: voteSide
+            }
           };
+          setCurrentUser(updatedUser);
+          localStorage.setItem('etribunal_user', JSON.stringify(updatedUser));
         }
       }
     } catch (err: any) {
@@ -142,43 +148,24 @@ export function CaseDetailPage() {
     if (isReacting || !caseData) return;
     setIsReacting(true);
     try {
-      const newSummary = await toggleReaction(targetType, targetId, emoji);
-      if (newSummary) {
+      if (targetType === 'CASE') {
+        const payload = await reactToCase({ caseId, emoji }).unwrap();
         const reactionsMap = { LIKE: 0, LOVE: 0, ANGRY: 0 };
-        newSummary.reactions.forEach((r: any) => {
+        payload.reactions.forEach((r) => {
           if (r.emoji in reactionsMap) {
-            reactionsMap[r.emoji as 'LIKE' | 'LOVE' | 'ANGRY'] = r.count;
+            reactionsMap[r.emoji] = r.count;
           }
         });
-
-        if (targetType === 'CASE') {
-          setCaseData({
-            ...caseData,
-            reactions: reactionsMap,
-            userReaction: caseData.userReaction === emoji ? null : emoji
-          });
-        } else if (targetType === 'COMMENT') {
-          const updateCommentsRecursive = (comments: CaseComment[]): CaseComment[] => {
-            return comments.map(c => {
-              if (c.id === targetId) {
-                return { 
-                  ...c, 
-                  reactions: reactionsMap, 
-                  userReaction: c.userReaction === emoji ? null : emoji 
-                };
-              }
-              if (c.replies && c.replies.length > 0) {
-                return { ...c, replies: updateCommentsRecursive(c.replies) };
-              }
-              return c;
-            });
-          };
-
-          setCaseData({
-            ...caseData,
-            comments: updateCommentsRecursive(caseData.comments)
-          });
-        }
+        setCaseData(prev => prev ? {
+          ...prev,
+          reactions: reactionsMap,
+          userReaction: payload.user_reaction,
+        } : prev);
+      } else if (targetType === 'COMMENT') {
+        // La UI de comentarios se renderiza desde la cache de commentsApi
+        // (visibleComments); reactToComment la parchea al completarse, así
+        // que aquí no hace falta tocar caseData.comments a mano.
+        await reactToComment({ commentId: targetId, emoji }).unwrap();
       }
     } catch (err: any) {
       console.error(err);

@@ -187,7 +187,7 @@ describe('useCommentsData', () => {
   it('addComment debería delegar en la mutación con parentId opcional', async () => {
     const promise = Promise.resolve(makeComment('c9'));
     mocks.mockAddTrigger.mockReturnValue(
-      Object.assign(promise, { unwrap: () => promise })
+      Object.assign(promise, { unwrap: () => promise }) as never
     );
 
     const { result } = renderHook(() => useCommentsData('case-1'));
@@ -206,10 +206,10 @@ describe('useCommentsData', () => {
     const updatePromise = Promise.resolve({});
     const deletePromise = Promise.resolve(undefined);
     mocks.mockUpdateTrigger.mockReturnValue(
-      Object.assign(updatePromise, { unwrap: () => updatePromise })
+      Object.assign(updatePromise, { unwrap: () => updatePromise }) as never
     );
     mocks.mockDeleteTrigger.mockReturnValue(
-      Object.assign(deletePromise, { unwrap: () => deletePromise })
+      Object.assign(deletePromise, { unwrap: () => deletePromise }) as never
     );
 
     const { result } = renderHook(() => useCommentsData('case-1'));

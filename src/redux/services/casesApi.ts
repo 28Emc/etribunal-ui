@@ -31,6 +31,7 @@ import { authStorage } from '@api/client';
 import type { Case, FeedTab } from '@typings/index';
 import { mapDbCaseToCase } from '@services/mappers/caseMapper';
 import { baseQuery } from './rtkApiClient';
+import { toReactionCounts, type ReactionEmoji, type ReactionPayload } from './reactionContract';
 
 // ============================================================
 // Constantes
@@ -61,17 +62,10 @@ export interface VotePayload {
   votes_both_wrong: number;
 }
 
-export interface ReactionPayload {
-  reactions: Array<{ emoji: 'LIKE' | 'LOVE' | 'ANGRY'; count: number }>;
-  user_reaction: 'LIKE' | 'LOVE' | 'ANGRY' | null;
-}
-
 export interface SavePayload {
   saved: boolean;
   anchorsCount: number;
 }
-
-type CaseReaction = 'LIKE' | 'LOVE' | 'ANGRY';
 
 // ============================================================
 // API
@@ -199,30 +193,21 @@ export const casesApi = createApi({
     }),
 
     /**
-     * Reaccionar a un caso (target_type CASE) o comentario.
-     * Solo se aplica a la cache de casos cuando targetType es CASE.
+     * Reaccionar a un caso (solo target_type CASE). Las reacciones a
+     * comentarios van por commentsApi.reactToComment (cache de
+     * comentarios, no de casos).
      */
-    reactToCase: builder.mutation<
-      ReactionPayload,
-      { targetType: 'CASE' | 'COMMENT'; targetId: string; emoji: CaseReaction }
-    >({
-      query: ({ targetType, targetId, emoji }) => ({
+    reactToCase: builder.mutation<ReactionPayload, { caseId: string; emoji: ReactionEmoji }>({
+      query: ({ caseId, emoji }) => ({
         url: '/reactions',
         method: 'POST',
-        body: { target_type: targetType, target_id: targetId, emoji },
+        body: { target_type: 'CASE', target_id: caseId, emoji },
       }),
-      async onQueryStarted({ targetType, targetId }, { dispatch, getState, queryFulfilled }) {
-        if (targetType !== 'CASE') return;
+      async onQueryStarted({ caseId }, { dispatch, getState, queryFulfilled }) {
         try {
           const { data } = await queryFulfilled;
-          const formatted: Record<'LIKE' | 'LOVE' | 'ANGRY', number> = { LIKE: 0, LOVE: 0, ANGRY: 0 };
-          for (const reaction of data.reactions) {
-            if (formatted[reaction.emoji] !== undefined) {
-              formatted[reaction.emoji] = reaction.count;
-            }
-          }
-          applyCasePatch(dispatch, getState, targetId, (draft) => {
-            draft.reactions = formatted;
+          applyCasePatch(dispatch, getState, caseId, (draft) => {
+            draft.reactions = toReactionCounts(data.reactions);
             draft.userReaction = data.user_reaction;
           });
         } catch {

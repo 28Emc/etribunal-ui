@@ -268,6 +268,58 @@ describe('commentsApi — mutaciones (actualizan la cache)', () => {
     const { data } = selectComments('case-1')(store.getState());
     expect(data?.comments.map((c) => c.id)).toEqual(['c2']);
   });
+
+  it('reactToComment debería POSTear /reactions y actualizar reacciones de un top-level', async () => {
+    mockRequest.mockResolvedValueOnce(rawPage(['c1']));
+    const store = createStore();
+    await store.dispatch(commentsApi.endpoints.getComments.initiate({ caseId: 'case-1' }));
+
+    mockRequest.mockResolvedValueOnce({
+      reactions: [{ emoji: 'LIKE', count: 3 }],
+      user_reaction: 'LIKE',
+    });
+    await store.dispatch(
+      commentsApi.endpoints.reactToComment.initiate({ commentId: 'c1', emoji: 'LIKE' })
+    );
+    await flush();
+
+    expect(mockRequest).toHaveBeenLastCalledWith(
+      expect.objectContaining({
+        url: '/reactions',
+        method: 'POST',
+        data: { target_type: 'COMMENT', target_id: 'c1', emoji: 'LIKE' },
+      })
+    );
+    const { data } = selectComments('case-1')(store.getState());
+    expect(data?.comments[0].reactions).toEqual({ LIKE: 3, LOVE: 0, ANGRY: 0 });
+    expect(data?.comments[0].userReaction).toBe('LIKE');
+  });
+
+  it('reactToComment debería actualizar reacciones de una respuesta anidada en replies', async () => {
+    mockRequest.mockResolvedValueOnce({
+      data: [
+        { ...rawComment('c1'), replies: [{ id: 'r1', content: 'Réplica' }] },
+      ],
+      next_cursor: null,
+      has_more: false,
+    });
+    const store = createStore();
+    await store.dispatch(commentsApi.endpoints.getComments.initiate({ caseId: 'case-1' }));
+
+    mockRequest.mockResolvedValueOnce({
+      reactions: [{ emoji: 'LOVE', count: 1 }],
+      user_reaction: null,
+    });
+    await store.dispatch(
+      commentsApi.endpoints.reactToComment.initiate({ commentId: 'r1', emoji: 'LOVE' })
+    );
+    await flush();
+
+    const { data } = selectComments('case-1')(store.getState());
+    const reply = data?.comments[0].replies?.[0];
+    expect(reply?.reactions).toEqual({ LIKE: 0, LOVE: 1, ANGRY: 0 });
+    expect(reply?.userReaction).toBeNull();
+  });
 });
 
 describe('commentsApi — getReplies', () => {

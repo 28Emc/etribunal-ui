@@ -206,19 +206,14 @@ export function FeedPage({ initialTab = 'for_you' }: FeedPageProps) {
     }
   }, [currentUser, cases, saveCase, t]);
 
-  const handleReaction = React.useCallback(async (
-    caseId: string,
-    emoji: 'LIKE' | 'LOVE' | 'ANGRY',
-    targetType: 'CASE' | 'COMMENT' = 'CASE',
-    targetId?: string
-  ) => {
+  const handleReaction = React.useCallback(async (caseId: string, emoji: 'LIKE' | 'LOVE' | 'ANGRY') => {
     if (!currentUser) {
       openAuthModal();
       return;
     }
 
     try {
-      await reactToCase({ targetType, targetId: targetId || caseId, emoji }).unwrap();
+      await reactToCase({ caseId, emoji }).unwrap();
     } catch (error) {
       console.error('Error toggling reaction:', error);
       showToast(t('toasts.errorProcessingReaction'), 'error');
