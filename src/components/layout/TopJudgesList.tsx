@@ -3,15 +3,7 @@ import { useTranslation } from 'react-i18next';
 import { formatNumber } from '@utils/helpers';
 import { getDisplayName, getAnonymousAvatar } from '@services/anonymity';
 import { UserCardSkeleton } from '@shared/components/Skeleton';
-
-interface TopJudge {
-  id: string;
-  username: string;
-  avatar_url: string | null;
-  is_anonymous: boolean;
-  followers_count: number;
-  is_following: boolean;
-}
+import type { TopJudge } from '@redux/services/usersApi';
 
 interface TopJudgesListProps {
   judges: TopJudge[];

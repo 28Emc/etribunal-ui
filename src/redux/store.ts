@@ -26,6 +26,7 @@ import authReducer from './slices/authSlice';
 import uiReducer from './slices/uiSlice';
 import { casesApi } from './services/casesApi';
 import { commentsApi } from './services/commentsApi';
+import { usersApi } from './services/usersApi';
 
 export const store = configureStore({
   reducer: {
@@ -33,10 +34,11 @@ export const store = configureStore({
     ui: uiReducer,
     [casesApi.reducerPath]: casesApi.reducer,
     [commentsApi.reducerPath]: commentsApi.reducer,
+    [usersApi.reducerPath]: usersApi.reducer,
   },
-  // Middleware de RTK Query para el cache de casos y comentarios
+  // Middleware de RTK Query para el cache de casos, comentarios y usuarios
   middleware: (getDefaultMiddleware) =>
-    getDefaultMiddleware().concat(casesApi.middleware, commentsApi.middleware),
+    getDefaultMiddleware().concat(casesApi.middleware, commentsApi.middleware, usersApi.middleware),
   // Activar DevTools solo en desarrollo
   devTools: import.meta.env.DEV,
 });

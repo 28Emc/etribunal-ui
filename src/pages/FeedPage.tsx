@@ -10,7 +10,6 @@ import { Tooltip } from '@components/ui/Tooltip';
 import { useAuth } from '@context/AuthContext';
 import { useToast } from '@components/ui/Toast';
 import type { Case, FeedTab } from '@typings/index';
-import { apiClient } from '@api/client';
 import { ShareModal } from '@components/ui/ShareModal';
 import type { ShareType } from '@hooks/useShare';
 import { getCasePath } from '@utils/helpers';
@@ -27,6 +26,7 @@ import {
   type FeedArgs,
 } from '@redux/services/casesApi';
 import { useAddCommentMutation } from '@redux/services/commentsApi';
+import { useFollowUserMutation, useGetTopJudgesQuery } from '@redux/services/usersApi';
 
 interface FeedPageProps {
   initialTab?: 'for_you' | 'following' | 'trending' | 'top-judges';
@@ -49,8 +49,6 @@ export function FeedPage({ initialTab = 'for_you' }: FeedPageProps) {
   const [selectedCategory, setSelectedCategory] = useState('All');
   const [skip, setSkip] = useState(0);
 
-  const [topJudgesCases, setTopJudgesCases] = useState<any[]>([]);
-  const [isLoadingTopJudges, setIsLoadingTopJudges] = useState(false);
   const [inviteNotice, setInviteNotice] = useState<string | null>(null);
   const [showShareModal, setShowShareModal] = useState(false);
   const [shareData, setShareData] = useState<{ type: ShareType; id: string; title?: string; username?: string }>({ type: 'case', id: '' });
@@ -104,24 +102,15 @@ export function FeedPage({ initialTab = 'for_you' }: FeedPageProps) {
     setSkip(0);
   }, [initialTab]);
 
-  const fetchTopJudges = React.useCallback(async () => {
-    setIsLoadingTopJudges(true);
-    try {
-      const data = await apiClient.get<any[]>('/users/top-judges?take=20');
-      setTopJudgesCases(data || []);
-    } catch (err) {
-      console.error('Error fetching top judges:', err);
-      setTopJudgesCases([]);
-    } finally {
-      setIsLoadingTopJudges(false);
-    }
-  }, []);
+  const { data: topJudges, isLoading: isLoadingTopJudges } = useGetTopJudgesQuery(undefined, {
+    skip: !isTopJudges,
+  });
+  const [followUser] = useFollowUserMutation();
 
   useEffect(() => {
-    if (isTopJudges) {
-      fetchTopJudges();
-    }
-  }, [isTopJudges, fetchTopJudges]);
+    setActiveTab(initialTab);
+    setSkip(0);
+  }, [initialTab]);
 
   const handleLoadMore = React.useCallback(() => {
     if (!hasMore || isFetching) return;
@@ -220,16 +209,16 @@ export function FeedPage({ initialTab = 'for_you' }: FeedPageProps) {
     }
   }, [currentUser, reactToCase, t]);
 
-  const handleFollowUser = async (userId: string, username: string) => {
+  const handleFollowUser = React.useCallback(async (_userId: string, username: string) => {
     if (!currentUser) return;
     try {
-      await apiClient.post<{ following: boolean }>(`/users/${username}/follow`, {});
-      await fetchTopJudges();
-    } catch (error: any) {
+      await followUser({ username }).unwrap();
+    } catch (error) {
       console.error('Follow error:', error);
-      showToast(error?.response?.data?.message || 'Error following user', 'error');
+      const message = (error as { data?: string } | undefined)?.data;
+      showToast(message || t('toasts.errorProcessingFollow'), 'error');
     }
-  };
+  }, [currentUser, followUser, t]);
 
   const handleAddComment = React.useCallback(async (caseId: string, text: string, parentId?: string) => {
     if (!currentUser) {
@@ -335,7 +324,7 @@ export function FeedPage({ initialTab = 'for_you' }: FeedPageProps) {
       <div className="space-y-5 px-0">
         {isTopJudges ? (
           <TopJudgesList
-            judges={topJudgesCases}
+            judges={topJudges ?? []}
             isLoading={isLoadingTopJudges}
             onFollow={handleFollowUser}
             onViewProfile={handleViewProfile}

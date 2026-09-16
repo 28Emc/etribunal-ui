@@ -1,4 +1,4 @@
-{
+﻿{
   "common": {
     "loading": "Cargando...",
     "error": "Error",
@@ -668,6 +668,7 @@
     "caseUnanchored": "Caso quitado de anclados",
     "errorProcessingAnchor": "Error al procesar anclaje",
     "errorProcessingReaction": "No se pudo procesar la reacción",
+    "errorProcessingFollow": "Error al seguir al juez",
     "verdictSentSuccess": "Veredicto enviado con éxito",
     "errorAddingVerdict": "Error al añadir veredicto",
     "verdictDeleted": "Veredicto eliminado",

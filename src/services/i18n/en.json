@@ -1,4 +1,4 @@
-{
+﻿{
   "common": {
     "loading": "Loading...",
     "error": "Error",
@@ -678,7 +678,7 @@
     "caseAnchored": "Case anchored successfully",
     "caseUnanchored": "Case removed from anchors",
     "errorProcessingAnchor": "Error processing anchor",
-    "errorProcessingReaction": "Could not process reaction",
+    "errorProcessingReaction": "Could not process reaction","errorProcessingFollow": "Error following judge",
     "verdictSentSuccess": "Verdict sent successfully",
     "errorAddingVerdict": "Error adding verdict",
     "verdictDeleted": "Verdict deleted",
