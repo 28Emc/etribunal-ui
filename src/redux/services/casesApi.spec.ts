@@ -382,3 +382,85 @@ describe('casesApi — listas del perfil', () => {
     expect(data?.cases[0]?.userVote).toBe('B');
   });
 });
+
+describe('casesApi — createCase / respondCase', () => {
+  it('createCase debería enviar POST /cases con body camelCase (CreateCaseRequest)', async () => {
+    mockRequest.mockResolvedValueOnce({ id: 'c1', title: 'Nuevo', votes_a: 0, votes_b: 0 });
+
+    const store = createStore();
+    await store.dispatch(
+      casesApi.endpoints.createCase.initiate({
+        type: 'vote',
+        title: 'Nuevo caso',
+        sideAContent: 'Historia',
+        category: 'Other',
+        isAnonymous: true,
+        sideBUserId: 'u9',
+        sideASubtitle: 'A',
+        sideBSubtitle: 'B',
+        bothWrongSubtitle: 'C',
+      })
+    );
+
+    expect(mockRequest).toHaveBeenCalledWith(
+      expect.objectContaining({
+        url: '/cases',
+        method: 'POST',
+        data: {
+          type: 'vote',
+          title: 'Nuevo caso',
+          sideAContent: 'Historia',
+          category: 'Other',
+          isAnonymous: true,
+          sideBUserId: 'u9',
+          sideASubtitle: 'A',
+          sideBSubtitle: 'B',
+          bothWrongSubtitle: 'C',
+        },
+      })
+    );
+  });
+
+  it('createCase debería transformar la respuesta con mapDbCaseToCase', async () => {
+    mockRequest.mockResolvedValueOnce({ id: 'c1', title: 'Nuevo', votes_a: 2, votes_b: 3 });
+
+    const store = createStore();
+    const result = await store.dispatch(
+      casesApi.endpoints.createCase.initiate({
+        type: 'classic',
+        title: 'Titulo largo',
+        sideAContent: 'Historia',
+      })
+    );
+
+    expect(result.data).toMatchObject({ id: 'c1', title: 'Nuevo', votesA: 2, votesB: 3 });
+  });
+
+  it('respondCase debería enviar POST /cases/respond con body snake_case (RespondSideBRequest)', async () => {
+    mockRequest.mockResolvedValueOnce({ id: 'c1' });
+
+    const store = createStore();
+    await store.dispatch(
+      casesApi.endpoints.respondCase.initiate({
+        invite_token: 'tok-1',
+        side_b_content: 'Mi respuesta',
+        is_anonymous: true,
+        evidence_urls: ['https://a/1.jpg'],
+        caseId: 'c1',
+      })
+    );
+
+    expect(mockRequest).toHaveBeenCalledWith(
+      expect.objectContaining({
+        url: '/cases/respond',
+        method: 'POST',
+        data: {
+          invite_token: 'tok-1',
+          side_b_content: 'Mi respuesta',
+          is_anonymous: true,
+          evidence_urls: ['https://a/1.jpg'],
+        },
+      })
+    );
+  });
+});

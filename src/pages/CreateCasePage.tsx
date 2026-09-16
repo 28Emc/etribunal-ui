@@ -6,13 +6,14 @@ import { X, Image as ImageIcon, Link as LinkIcon, Copy, Check, Sparkles, Send, A
 import { cn } from '@utils/helpers';
 import type { Case, UserSearchResult } from '@typings/index';
 import { useAuth } from '@context/AuthContext';
-import { apiClient, authStorage } from '@api/client';
+import { apiClient } from '@api/client';
 import { Tooltip } from '@components/ui/Tooltip';
 import { PageLayout } from '@layout/PageLayout';
 import { SEO } from '@components/ui/SEO';
 import { getAnonymousAvatar } from '@services/anonymity';
 import { useAppDispatch } from '@redux/hooks';
-import { prependCaseToFeed } from '@redux/services/casesApi';
+import { prependCaseToFeed, useCreateCaseMutation } from '@redux/services/casesApi';
+import { useGetMyFollowingQuery, useSearchUsersQuery } from '@redux/services/usersApi';
 
 export function CreateCasePage() {
   const { t } = useTranslation();
@@ -31,16 +32,15 @@ export function CreateCasePage() {
   const [submittedType, setSubmittedType] = useState<'vote' | 'classic' | null>(null);
   const [copied, setCopied] = useState(false);
   const [sideBQuery, setSideBQuery] = useState('');
-  const [sideBResults, setSideBResults] = useState<UserSearchResult[]>([]);
+  const [debouncedSideBQuery, setDebouncedSideBQuery] = useState('');
   const [selectedSideB, setSelectedSideB] = useState<UserSearchResult | null>(null);
-  const [isSearchingUsers, setIsSearchingUsers] = useState(false);
   const [sideBInputFocused, setSideBInputFocused] = useState(false);
-  const [followingUsers, setFollowingUsers] = useState<UserSearchResult[]>([]);
   const [sideASubtitle, setSideASubtitle] = useState('');
   const [sideBSubtitle, setSideBSubtitle] = useState('');
   const [bothWrongSubtitle, setBothWrongSubtitle] = useState('');
   const globalAnon = currentUser?.is_anonymous ?? false;
   const [isAnonymous, setIsAnonymous] = useState(globalAnon);
+  const [createCase] = useCreateCaseMutation();
   useEffect(() => {
     setSideASubtitle(t('cases.defaultSideA'));
     setSideBSubtitle(t('cases.defaultSideB'));
@@ -56,59 +56,28 @@ export function CreateCasePage() {
     }
   }, [currentUser, navigate]);
 
-  const fetchFollowingUsers = async () => {
-    if (!authStorage.isAuthenticated()) return;
-    try {
-      const data = await apiClient.get<UserSearchResult[]>('/users/me/following?take=6');
-      setFollowingUsers(data || []);
-    } catch (error) {
-      console.error('Error fetching following:', error);
-      setFollowingUsers([]);
-    }
-  };
+  const { data: followingData } = useGetMyFollowingQuery(undefined, {
+    skip: caseType !== 'vote' || !currentUser,
+  });
+  const followingUsers = followingData ?? [];
+
+  const canSearchUsers =
+    caseType === 'vote' &&
+    !!currentUser &&
+    debouncedSideBQuery.length >= 2 &&
+    selectedSideB?.username !== debouncedSideBQuery;
+  const { data: searchData, isFetching: isSearchingUsers } = useSearchUsersQuery(
+    { q: debouncedSideBQuery },
+    { skip: !canSearchUsers }
+  );
+  const sideBResults = canSearchUsers ? (searchData ?? []) : [];
 
   useEffect(() => {
-    if (caseType === 'vote' && authStorage.isAuthenticated()) {
-      fetchFollowingUsers();
-    }
-  }, [caseType]);
-
-  useEffect(() => {
-    if (caseType !== 'vote' || !authStorage.isAuthenticated()) {
-      setSideBResults([]);
-      setIsSearchingUsers(false);
-      return;
-    }
-
-    const normalizedQuery = sideBQuery.trim();
-    
-    if (sideBInputFocused && normalizedQuery.length === 0) {
-      setSideBResults(followingUsers);
-      return;
-    }
-
-    if (normalizedQuery.length < 2 || selectedSideB?.username === normalizedQuery) {
-      setSideBResults([]);
-      return;
-    }
-
-    const timeoutId = window.setTimeout(async () => {
-      setIsSearchingUsers(true);
-      try {
-        const users = await apiClient.get<UserSearchResult[]>(
-          `/users/search?q=${encodeURIComponent(normalizedQuery)}&take=6`,
-        );
-        setSideBResults(users);
-      } catch (error) {
-        console.error('Error searching users:', error);
-        setSideBResults([]);
-      } finally {
-        setIsSearchingUsers(false);
-      }
+    const timeoutId = window.setTimeout(() => {
+      setDebouncedSideBQuery(sideBQuery.trim());
     }, 250);
-
     return () => window.clearTimeout(timeoutId);
-  }, [caseType, sideBQuery, selectedSideB, sideBInputFocused, followingUsers]);
+  }, [sideBQuery]);
 
   const handleImageUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
     const files = e.target.files;
@@ -159,7 +128,7 @@ export function CreateCasePage() {
     setErrors(prev => ({ ...prev, general: undefined }));
 
     if (!validateForm()) return;
-    if (!authStorage.isAuthenticated()) return;
+    if (!currentUser) return;
 
     setIsSubmitting(true);
 
@@ -173,30 +142,29 @@ export function CreateCasePage() {
       const uploadResults = await Promise.all(uploadPromises);
       const uploadedUrls = uploadResults.map(result => result.url);
 
-      const createdCase = await apiClient.post<any>('/cases', {
+      const createdCase = await createCase({
         type: caseType,
         title,
         category,
-        side_a_content: story,
-        side_a_subtitle: sideASubtitle || t('cases.defaultSideA'),
-        side_b_subtitle: sideBSubtitle || t('cases.defaultSideB'),
-        both_wrong_subtitle: bothWrongSubtitle || t('cases.defaultBothWrong'),
-        is_anonymous: isAnonymous,
-        evidence_urls: uploadedUrls,
-        side_b_user_id: caseType === 'vote' ? selectedSideB?.id : undefined,
-      });
+        sideAContent: story,
+        sideASubtitle: sideASubtitle || t('cases.defaultSideA'),
+        sideBSubtitle: sideBSubtitle || t('cases.defaultSideB'),
+        bothWrongSubtitle: bothWrongSubtitle || t('cases.defaultBothWrong'),
+        isAnonymous: isAnonymous,
+        sideBUserId: caseType === 'vote' ? selectedSideB?.id : undefined,
+      }).unwrap();
 
       const newCase: Case = {
         id: createdCase.id,
         title: createdCase.title,
         category,
         type: caseType,
-        inviteToken: createdCase.invite_token || null,
-        inviteUrl: createdCase.invite_url || null,
+        inviteToken: createdCase.inviteToken || null,
+        inviteUrl: createdCase.inviteUrl || null,
         sideA: {
           name: currentUser?.name || "You",
           avatar: currentUser?.avatar || "https://picsum.photos/seed/user123/100/100",
-          story: createdCase.side_a_content,
+          story: createdCase.sideA.story,
           evidence: uploadedUrls.map((url, i) => ({ id: `e${i}`, url, caption: 'Evidence' }))
         },
         sideB: {
@@ -211,7 +179,7 @@ export function CreateCasePage() {
         votesBothWrong: 0,
         comments: [],
         tags: [category],
-        createdAt: createdCase.created_at
+        createdAt: createdCase.createdAt
       };
 
       dispatch(prependCaseToFeed(newCase));
@@ -220,12 +188,12 @@ export function CreateCasePage() {
         setShareLink('__classic_success__');
         setSubmittedType('classic');
       } else {
-        setShareLink(createdCase.invite_url || `${window.location.origin}/cases/${createdCase.invite_token}`);
+        setShareLink(createdCase.inviteUrl || `${window.location.origin}/cases/${createdCase.inviteToken}`);
         setSubmittedType('vote');
       }
     } catch (error: any) {
       console.error('Error creating case:', error);
-      setErrors(prev => ({ ...prev, general: error?.message || 'Error de conexión. Verifica si tu backend corre sin problemas.' }));
+      setErrors(prev => ({ ...prev, general: error?.data || error?.message || 'Error de conexión. Verifica si tu backend corre sin problemas.' }));
     } finally {
       setIsSubmitting(false);
     }
@@ -350,13 +318,12 @@ export function CreateCasePage() {
               <div className="grid grid-cols-2 gap-3">
                 <button
                   type="button"
-                  onClick={() => {
-                    setCaseType('classic');
-                    setSideBQuery('');
-                    setSideBResults([]);
-                    setSelectedSideB(null);
-                    setErrors(prev => ({ ...prev, sideB: '' }));
-                  }}
+onClick={() => {
+                      setCaseType('classic');
+                      setSideBQuery('');
+                      setSelectedSideB(null);
+                      setErrors(prev => ({ ...prev, sideB: '' }));
+                    }}
                   className={cn(
                     "flex flex-col items-start gap-2 p-4 rounded-2xl border-2 transition-all text-left",
                     caseType === 'classic'
@@ -412,7 +379,6 @@ export function CreateCasePage() {
                       onClick={() => {
                         setSelectedSideB(null);
                         setSideBQuery('');
-                        setSideBResults([]);
                       }}
                       className="px-3 py-2 rounded-xl border border-border-main/10 text-[10px] font-black uppercase tracking-widest text-text-muted hover:border-border-main/20 hover:text-text-main transition-all"
                     >
@@ -464,7 +430,6 @@ export function CreateCasePage() {
                             onClick={() => {
                               setSelectedSideB(user);
                               setSideBQuery(user.username);
-                              setSideBResults([]);
                               setSideBInputFocused(false);
                             }}
                             className="w-full px-5 py-4 flex items-center gap-3 text-left hover:bg-primary/5 transition-colors border-b border-border-main/5 last:border-b-0"
@@ -497,7 +462,6 @@ export function CreateCasePage() {
                               onClick={() => {
                                 setSelectedSideB(user);
                                 setSideBQuery(user.username);
-                                setSideBResults([]);
                               }}
                               className="w-full px-5 py-4 flex items-center gap-3 text-left hover:bg-primary/5 transition-colors border-b border-border-main/5 last:border-b-0"
                             >

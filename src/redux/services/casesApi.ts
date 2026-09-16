@@ -70,6 +70,36 @@ export interface SavePayload {
   anchorsCount: number;
 }
 
+/**
+ * Payload de creación de caso. Va en camelCase porque así lo espera
+ * CreateCaseRequest (core-domain-service). El backend NO persiste
+ * evidence_urls (ese campo no existe en el DTO).
+ */
+export interface CreateCasePayload {
+  type: 'vote' | 'classic';
+  title: string;
+  sideAContent: string;
+  category?: string;
+  isAnonymous?: boolean;
+  sideBUserId?: string;
+  sideASubtitle?: string;
+  sideBSubtitle?: string;
+  bothWrongSubtitle?: string;
+}
+
+/**
+ * Payload de respuesta a invitación (Side B). Va en snake_case porque
+ * así lo espera RespondSideBRequest. `caseId` es opcional y solo se usa
+ * para invalidar la cache de getCase del caso respondido.
+ */
+export interface RespondCasePayload {
+  invite_token: string;
+  side_b_content: string;
+  is_anonymous?: boolean;
+  evidence_urls?: string[];
+  caseId?: string;
+}
+
 export interface UserCaseListArgs {
   username: string;
   skip: number;
@@ -280,6 +310,45 @@ export const casesApi = createApi({
         }
       },
     }),
+
+    /**
+     * Crear un caso. El payload va en camelCase (CreateCaseRequest) y el
+     * backend descarta evidence_urls. La respuesta se normaliza con
+     * mapDbCaseToCase; el caller la inserta al feed con prependCaseToFeed.
+     */
+    createCase: builder.mutation<Case, CreateCasePayload>({
+      query: (payload) => ({
+        url: '/cases',
+        method: 'POST',
+        body: payload,
+      }),
+      transformResponse: (raw: unknown) => {
+        return mapDbCaseToCase(raw as Record<string, unknown>, authStorage.getUserId() ?? undefined);
+      },
+    }),
+
+    /**
+     * Responder a una invitación como Side B (JoinCasePage). El payload va
+     * en snake_case (RespondSideBRequest). Si se pasa `caseId`, al completar
+     * se invalida la cache de getCase de ese id (estado WAITING→PUBLIC).
+     */
+    respondCase: builder.mutation<Case, RespondCasePayload>({
+      query: (payload) => ({
+        url: '/cases/respond',
+        method: 'POST',
+        body: {
+          invite_token: payload.invite_token,
+          side_b_content: payload.side_b_content,
+          is_anonymous: payload.is_anonymous,
+          evidence_urls: payload.evidence_urls,
+        },
+      }),
+      transformResponse: (raw: unknown) => {
+        return mapDbCaseToCase(raw as Record<string, unknown>, authStorage.getUserId() ?? undefined);
+      },
+      invalidatesTags: (_result, _error, arg) =>
+        arg.caseId ? [{ type: 'Case' as const, id: arg.caseId }] : [],
+    }),
   }),
 });
 
@@ -438,4 +507,6 @@ export const {
   useRemoveVoteMutation,
   useSaveCaseMutation,
   useReactToCaseMutation,
+  useCreateCaseMutation,
+  useRespondCaseMutation,
 } = casesApi;

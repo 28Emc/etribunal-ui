@@ -1,13 +1,10 @@
-import React, { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import { Loader2 } from 'lucide-react';
 import { PageLayout } from '@layout/PageLayout';
 import { JoinCase } from '@components/ui/JoinCase';
-import type { Case } from '@typings/index';
-import { apiClient } from '@api/client';
-import { mapDbCaseToCase } from '@shared/utils/caseMapper';
 import { useToast } from '@components/ui/Toast';
+import { useGetCaseQuery, useRespondCaseMutation } from '@redux/services/casesApi';
 
 export function JoinCasePage() {
   const { id } = useParams<{ id?: string }>();
@@ -15,46 +12,27 @@ export function JoinCasePage() {
   const { t } = useTranslation();
   const { addToast } = useToast();
 
-  const [caseData, setCaseData] = useState<Case | null>(null);
-  const [inviteToken, setInviteToken] = useState<string | null>(null);
-  const [isLoading, setIsLoading] = useState(true);
-
-  const fetchCase = async () => {
-    if (!id) return;
-
-    setIsLoading(true);
-    try {
-      const data = await apiClient.get<any>(`/cases/${id}`);
-      if (data) {
-        setCaseData(mapDbCaseToCase(data));
-        setInviteToken(data.invite_token || data.id);
-      }
-    } catch (err) {
-      console.error('Error fetching case:', err);
-    } finally {
-      setIsLoading(false);
-    }
-  };
-
-  useEffect(() => {
-    fetchCase();
-  }, [id]);
+  const { data: caseData, isLoading } = useGetCaseQuery(id ?? '', { skip: !id });
+  const inviteToken = caseData?.inviteToken || caseData?.id || null;
+  const [respondCase] = useRespondCaseMutation();
 
   const handleSubmitResponse = async (story: string, images: string[], isAnonymous: boolean) => {
     if (!inviteToken || !story.trim()) return;
-    
+
     try {
-      await apiClient.post(`/cases/respond`, {
+      await respondCase({
         invite_token: inviteToken,
         side_b_content: story,
         evidence_urls: images,
-        is_anonymous: isAnonymous
-      });
+        is_anonymous: isAnonymous,
+        caseId: id,
+      }).unwrap();
       addToast('success', t('toasts.responseSubmitted'));
       navigate('/');
-    } catch (err: any) {
+    } catch (err) {
       console.error('Error submitting response:', err);
-      addToast('error', err.message || t('errors.genericError'));
+      const message = (err as { data?: string } | undefined)?.data;
+      addToast('error', message || t('errors.genericError'));
       throw err;
     }
   };

@@ -146,3 +146,81 @@ describe('usersApi — followUser', () => {
     expect(data).toBeUndefined();
   });
 });
+
+describe('usersApi — searchUsers', () => {
+  it('debería llamar a GET /users/search con q y take=6', async () => {
+    mockRequest.mockResolvedValueOnce([{ id: 'u1', username: 'ana' }]);
+
+    const store = createStore();
+    await store.dispatch(usersApi.endpoints.searchUsers.initiate({ q: 'ana' }));
+
+    expect(mockRequest).toHaveBeenCalledWith(
+      expect.objectContaining({
+        url: '/users/search',
+        method: 'GET',
+        params: { q: 'ana', take: 6 },
+      })
+    );
+  });
+
+  it('debería normalizar las filas al shape UserSearchResult', async () => {
+    mockRequest.mockResolvedValueOnce([
+      { id: 'u1', username: 'ana_perez', avatar_url: 'http://a/1.png', bio: 'Hola', is_anonymous: false },
+    ]);
+
+    const store = createStore();
+    await store.dispatch(usersApi.endpoints.searchUsers.initiate({ q: 'ana' }));
+
+    const { data } = usersApi.endpoints.searchUsers.select({ q: 'ana' })(store.getState());
+    expect(data?.[0]).toMatchObject({
+      id: 'u1',
+      username: 'ana_perez',
+      avatar_url: 'http://a/1.png',
+      bio: 'Hola',
+      is_anonymous: false,
+    });
+  });
+
+  it('debería devolver lista vacía si la respuesta no es un array', async () => {
+    mockRequest.mockResolvedValueOnce({ users: [] });
+
+    const store = createStore();
+    await store.dispatch(usersApi.endpoints.searchUsers.initiate({ q: 'xyz' }));
+
+    const { data } = usersApi.endpoints.searchUsers.select({ q: 'xyz' })(store.getState());
+    expect(data).toEqual([]);
+  });
+});
+
+describe('usersApi — getMyFollowing', () => {
+  it('debería llamar a GET /users/me/following con take=6', async () => {
+    mockRequest.mockResolvedValueOnce([]);
+
+    const store = createStore();
+    await store.dispatch(usersApi.endpoints.getMyFollowing.initiate(undefined));
+
+    expect(mockRequest).toHaveBeenCalledWith(
+      expect.objectContaining({
+        url: '/users/me/following',
+        method: 'GET',
+        params: { take: 6 },
+      })
+    );
+  });
+
+  it('debería mapear filas (incluye is_anonymous solo si el flag llega)', async () => {
+    mockRequest.mockResolvedValueOnce([
+      { id: 'u1', username: 'seguido', avatar_url: null, bio: 'Bio' },
+      { id: 'u2', username: 'anon', is_anonymous: true },
+    ]);
+
+    const store = createStore();
+    await store.dispatch(usersApi.endpoints.getMyFollowing.initiate(undefined));
+
+    const { data } = usersApi.endpoints.getMyFollowing.select(undefined)(store.getState());
+    expect(data).toEqual([
+      { id: 'u1', username: 'seguido', avatar_url: null, bio: 'Bio', is_anonymous: false },
+      { id: 'u2', username: 'anon', avatar_url: undefined, bio: undefined, is_anonymous: true },
+    ]);
+  });
+});

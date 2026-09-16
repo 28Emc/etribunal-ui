@@ -17,6 +17,7 @@
 
 import { createApi } from '@reduxjs/toolkit/query/react';
 import { baseQuery } from './rtkApiClient';
+import type { UserSearchResult } from '@typings/index';
 
 // ============================================================
 // Tipos públicos
@@ -96,8 +97,45 @@ export const usersApi = createApi({
         }
       },
     }),
+
+    /**
+     * Búsqueda de usuarios por username (sugerencias del select de Side B en
+     * CreateCasePage). El backend responde GET /users/search con rows planas;
+     * se normaliza al shape UserSearchResult del frontend.
+     */
+    searchUsers: builder.query<UserSearchResult[], { q: string }>({
+      query: ({ q }) => ({ url: '/users/search', params: { q, take: 6 } }),
+      transformResponse: (raw: unknown) => mapUserSearchResults(raw),
+    }),
+
+    /**
+     * Usuarios que sigue el usuario logueado (sugerencias del select de Side
+     * B cuando no hay término de búsqueda). Requiere auth.
+     */
+    getMyFollowing: builder.query<UserSearchResult[], void>({
+      query: () => ({ url: '/users/me/following', params: { take: 6 } }),
+      transformResponse: (raw: unknown) => mapUserSearchResults(raw),
+    }),
   }),
 });
+
+// ============================================================
+// Helpers
+// ============================================================
+
+function mapUserSearchResults(raw: unknown): UserSearchResult[] {
+  const list = Array.isArray(raw) ? raw : [];
+  return list.map((item) => {
+    const row = item as Record<string, unknown>;
+    return {
+      id: String(row.id),
+      username: String(row.username),
+      avatar_url: row.avatar_url as string | null | undefined,
+      bio: (row.bio as string) ?? undefined,
+      is_anonymous: row.is_anonymous === true,
+    };
+  });
+}
 
 // ============================================================
 // Hooks generados
@@ -106,4 +144,6 @@ export const usersApi = createApi({
 export const {
   useGetTopJudgesQuery,
   useFollowUserMutation,
+  useSearchUsersQuery,
+  useGetMyFollowingQuery,
 } = usersApi;
