@@ -8,12 +8,10 @@ import { DeleteCaseModal } from '@components/ui/DeleteCaseModal';
 import { EditImagesModal } from '@components/ui/EditImagesModal';
 import { EditCaseModal, type EditCasePayload } from '@components/ui/EditCaseModal';
 import { useAuth } from '@context/AuthContext';
-import { useVoteCaseMutation, useReactToCaseMutation, useSaveCaseMutation } from '@redux/services/casesApi';
+import { useGetCaseQuery, useVoteCaseMutation, useReactToCaseMutation, useSaveCaseMutation } from '@redux/services/casesApi';
 import { useReactToCommentMutation } from '@redux/services/commentsApi';
 import { useCommentsData } from '@hooks/useCommentsData';
 import { apiClient } from '@api/client';
-import { mapDbCaseToCase } from '@shared/utils/caseMapper';
-import type { Case } from '@typings/index';
 import { useToast } from '@components/ui/Toast';
 import { useTranslation } from 'react-i18next';
 import { PageLayout } from '@layout/PageLayout';
@@ -28,8 +26,6 @@ export function CaseDetailPage() {
   const { t } = useTranslation();
   const { addToast } = useToast();
 
-  const [caseData, setCaseData] = useState<Case | null>(null);
-  const [isLoading, setIsLoading] = useState(true);
   const [isVoting, setIsVoting] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
   const [isCommenting, setIsCommenting] = useState(false);
@@ -43,6 +39,23 @@ export function CaseDetailPage() {
   const [showEditCaseModal, setShowEditCaseModal] = useState(false);
   const commentsCountRef = useRef<number>(0);
   const commentsSkipRef = useRef<number>(0);
+
+  // Detalle vía RTK Query. La clave de cache es el id del caso o, en rutas
+  // semánticas, `username/slug`; ambas resuelven el mismo endpoint /cases/<key>.
+  // applyCasePatch parchea todas las entradas de getCase (id o slug) cuando
+  // el usuario vota/reacciona/guarda (ver casesApi).
+  const isSlugRoute = !!params.slug;
+  const detailKey = isSlugRoute ? `${params.username}/${params.slug}` : caseIdentifier ?? '';
+  const { data: caseData, isLoading, isError, refetch } = useGetCaseQuery(detailKey, {
+    skip: !detailKey,
+  });
+
+  useEffect(() => {
+    if (isError) {
+      addToast('error', t('toasts.errorFetchingCase') || 'Error fetching case');
+      navigate('/', { replace: true });
+    }
+  }, [isError, navigate, addToast, t]);
 
   const isModerator = currentUser?.role === 'MODERATOR';
   const isCurrentUserSideA = !!currentUser && !!caseData?.sideAUserId && currentUser.id === caseData.sideAUserId;
@@ -65,34 +78,6 @@ export function CaseDetailPage() {
     fetchOlderComments,
   } = commentsData;
 
-  // Determine the correct API endpoint based on route params
-  const isSlugRoute = !!params.slug;
-  const fetchCaseUrl = isSlugRoute 
-    ? `/cases/${params.username}/${params.slug}`
-    : `/cases/${caseIdentifier}`;
-
-  useEffect(() => {
-    if (!caseIdentifier && !params.username) return;
-
-    const fetchSingleCase = async () => {
-      setIsLoading(true);
-      try {
-        const caseRes = await apiClient.get<any>(fetchCaseUrl);
-
-        const mappedCase = mapDbCaseToCase(caseRes, currentUser?.id);
-
-        setCaseData(mappedCase);
-      } catch (error) {
-        console.error('Error fetching case:', error);
-        addToast('error', t('toasts.errorFetchingCase') || 'Error fetching case');
-        navigate('/', { replace: true });
-      } finally {
-        setIsLoading(false);
-      }
-    };
-    fetchSingleCase();
-  }, [fetchCaseUrl, currentUser?.id]);
-
   const handleShowNewComments = () => {
     showNewComments();
   };
@@ -103,26 +88,19 @@ export function CaseDetailPage() {
     setIsVoting(true);
     try {
       const voteSide = side === 'BothWrong' ? 'BOTH_WRONG' : side;
-      const res = await voteCase({ caseId, voteType: voteSide }).unwrap();
-      if (caseData) {
-        setCaseData(prev => prev ? {
-          ...prev,
-          votesA: res.votes_a,
-          votesB: res.votes_b,
-          votesBothWrong: res.votes_both_wrong,
-          userVote: voteSide
-        } : prev);
-        if (currentUser) {
-          const updatedUser = {
-            ...currentUser,
-            votes: {
-              ...currentUser.votes,
-              [caseId]: voteSide
-            }
-          };
-          setCurrentUser(updatedUser);
-          localStorage.setItem('etribunal_user', JSON.stringify(updatedUser));
-        }
+      // Los contadores y userVote se actualizan vía applyCasePatch sobre la
+      // cache de getCase/feed al completarse la mutación.
+      await voteCase({ caseId, voteType: voteSide }).unwrap();
+      if (currentUser) {
+        const updatedUser = {
+          ...currentUser,
+          votes: {
+            ...currentUser.votes,
+            [caseId]: voteSide
+          }
+        };
+        setCurrentUser(updatedUser);
+        localStorage.setItem('etribunal_user', JSON.stringify(updatedUser));
       }
     } catch (err: any) {
       addToast('error', err.message || t('toasts.voteError'));
@@ -135,12 +113,9 @@ export function CaseDetailPage() {
     if (isSaving) return;
     setIsSaving(true);
     try {
-      const data = await saveCase({ caseId }).unwrap();
-      setCaseData(prev => prev ? {
-        ...prev,
-        isSaved: data.saved,
-        anchorsCount: data.anchorsCount,
-      } : prev);
+      // isSaved/anchorsCount se actualizan vía applyCasePatch sobre la cache
+      // de getCase/feed al completarse la mutación.
+      await saveCase({ caseId }).unwrap();
     } catch (err) {
       console.error(err);
       addToast('error', t('toasts.errorProcessingAnchor'));
@@ -154,18 +129,9 @@ export function CaseDetailPage() {
     setIsReacting(true);
     try {
       if (targetType === 'CASE') {
-        const payload = await reactToCase({ caseId, emoji }).unwrap();
-        const reactionsMap = { LIKE: 0, LOVE: 0, ANGRY: 0 };
-        payload.reactions.forEach((r) => {
-          if (r.emoji in reactionsMap) {
-            reactionsMap[r.emoji] = r.count;
-          }
-        });
-        setCaseData(prev => prev ? {
-          ...prev,
-          reactions: reactionsMap,
-          userReaction: payload.user_reaction,
-        } : prev);
+        // Las reacciones del caso se actualizan vía applyCasePatch sobre la
+        // cache de getCase/feed al completarse la mutación.
+        await reactToCase({ caseId, emoji }).unwrap();
       } else if (targetType === 'COMMENT') {
         // La UI de comentarios se renderiza desde la cache de commentsApi
         // (visibleComments); reactToComment la parchea al completarse, así
@@ -222,8 +188,7 @@ const handleAddComment = async (caseId: string, text: string, parentId?: string)
         evidence_urls: images,
         is_anonymous: isAnonymous ?? false,
       });
-      const data = await apiClient.get<any>(`/cases/${caseData.id}`);
-      setCaseData(mapDbCaseToCase(data, currentUser?.id));
+      await refetch();
       addToast('success', t('toasts.responseRegisteredSuccess'));
     } catch (error: any) {
       console.error('Error responding:', error);
@@ -244,8 +209,7 @@ const handleAddComment = async (caseId: string, text: string, parentId?: string)
   const handleReportCase = async (caseId: string, reason: string) => {
     try {
       await apiClient.post(`/cases/${caseId}/report`, { reason });
-      const data = await apiClient.get<any>(`/cases/${caseId}`);
-      setCaseData(mapDbCaseToCase(data, currentUser?.id));
+      await refetch();
       addToast('success', t('moderator.reportSubmitted'));
     } catch (err: any) {
       addToast('error', err.message || t('moderator.reportError'));
@@ -266,8 +230,8 @@ const handleAddComment = async (caseId: string, text: string, parentId?: string)
 
   const handleEditImages = async (caseId: string, keepImageIds: string[], newUrls: string[]) => {
     try {
-      const updatedCase = await apiClient.patch<any>(`/cases/${caseId}/images`, { keepImageIds, newUrls });
-      setCaseData(mapDbCaseToCase(updatedCase, currentUser?.id));
+      await apiClient.patch<any>(`/cases/${caseId}/images`, { keepImageIds, newUrls });
+      await refetch();
       addToast('success', t('moderator.imagesUpdated'));
     } catch (err: any) {
       addToast('error', err.message || t('moderator.imagesError'));
@@ -277,8 +241,8 @@ const handleAddComment = async (caseId: string, text: string, parentId?: string)
 
   const handleEditCase = async (caseId: string, dto: EditCasePayload) => {
     try {
-      const updatedCase = await apiClient.patch<any>(`/cases/${caseId}`, dto);
-      setCaseData(mapDbCaseToCase(updatedCase, currentUser?.id));
+      await apiClient.patch<any>(`/cases/${caseId}`, dto);
+      await refetch();
       addToast('success', t('cases.caseEdited'));
     } catch (err: any) {
       addToast('error', err.message || t('cases.caseEditedError'));

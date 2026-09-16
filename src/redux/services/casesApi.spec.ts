@@ -280,4 +280,26 @@ describe('casesApi — getCase (detalle)', () => {
     expect(detail.data?.votesB).toBe(6);
     expect(detail.data?.userVote).toBe('B');
   });
+
+  it('voteCase actualiza también la cache del detalle keyed por slug', async () => {
+    mockRequest.mockResolvedValueOnce(rawCase('c1', 10));
+
+    const store = createStore();
+    await store.dispatch(casesApi.endpoints.getCase.initiate('ana/primer-caso'));
+
+    mockRequest.mockResolvedValueOnce({
+      vote_type: 'B',
+      votes_a: 10,
+      votes_b: 6,
+      votes_both_wrong: 0,
+    });
+    await store.dispatch(
+      casesApi.endpoints.voteCase.initiate({ caseId: 'c1', voteType: 'B' })
+    );
+    await flush();
+
+    const detail = casesApi.endpoints.getCase.select('ana/primer-caso')(store.getState());
+    expect(detail.data?.votesB).toBe(6);
+    expect(detail.data?.userVote).toBe('B');
+  });
 });

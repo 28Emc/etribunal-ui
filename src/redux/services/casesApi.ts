@@ -111,10 +111,16 @@ export const casesApi = createApi({
     }),
 
     /**
-     * Detalle de un caso (fuente para la futura migración de CaseDetailPage).
+     * Detalle de un caso (usado por CaseDetailPage). El argumento es la
+     * clave de cache y a la vez el path del endpoint:
+     *   - `/cases/:id`             → `/cases/' + id`
+     *   - `/cases/:username/:slug` → `/cases/' + 'username/slug'`
+     * Las mutaciones (voteCase/reactToCase/saveCase) parchean todas las
+     * entradas de getCase cuya `data.id === caseId` (ver applyCasePatch),
+     * cubriendo tanto cache por id como por slug.
      */
     getCase: builder.query<Case, string>({
-      query: (id) => ({ url: `/cases/${id}` }),
+      query: (key) => ({ url: `/cases/${key}` }),
       transformResponse: (raw: unknown) => {
         return mapDbCaseToCase(raw as Record<string, unknown>, authStorage.getUserId() ?? undefined);
       },
@@ -228,6 +234,10 @@ function getCachedFeedArgs(getState: () => unknown): FeedArgs[] {
   return casesApi.util.selectCachedArgsForQuery(getState() as never, 'getFeed') as FeedArgs[];
 }
 
+function getCachedDetailArgs(getState: () => unknown): string[] {
+  return casesApi.util.selectCachedArgsForQuery(getState() as never, 'getCase') as string[];
+}
+
 /**
  * Aplica un cambio a un caso en TODAS las entradas cacheadas del feed
  * (selectCachedArgsForQuery itera cada argumento real de getFeed) y en
@@ -243,11 +253,15 @@ function applyCasePatch(dispatch: AppDispatch, getState: () => unknown, caseId: 
       })
     );
   }
-  dispatch(
-    casesApi.util.updateQueryData('getCase', caseId, (draft) => {
-      updater(draft);
-    })
-  );
+  // Detalle: la cache puede estar keyed por UUID o por username/slug,
+  // así que se parchea cualquier entrada cuya data.id sea el caso.
+  for (const key of getCachedDetailArgs(getState)) {
+    dispatch(
+      casesApi.util.updateQueryData('getCase', key, (draft) => {
+        if (draft.id === caseId) updater(draft);
+      })
+    );
+  }
 }
 
 /**
@@ -282,11 +296,13 @@ export function incrementCaseShareCount(caseId: string): ThunkAction<void, RootS
         })
       );
     }
-    dispatch(
-      casesApi.util.updateQueryData('getCase', caseId, (draft) => {
-        draft.sharesCount = (draft.sharesCount ?? 0) + 1;
-      })
-    );
+    for (const key of getCachedDetailArgs(getState)) {
+      dispatch(
+        casesApi.util.updateQueryData('getCase', key, (draft) => {
+          if (draft.id === caseId) draft.sharesCount = (draft.sharesCount ?? 0) + 1;
+        })
+      );
+    }
   };
 }
 
