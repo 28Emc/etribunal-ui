@@ -100,6 +100,40 @@ export interface RespondCasePayload {
   caseId?: string;
 }
 
+/**
+ * Shape de GET /cases/trending/top (sidebar). Se conserva snake_case del
+ * backend porque el sidebar solo muestra título, categoría, contajes y autor.
+ */
+export interface TrendingCase {
+  id: string;
+  title: string;
+  slug?: string | null;
+  category: string;
+  votes_a: number;
+  votes_b: number;
+  votes_both_wrong: number;
+  _count?: { comments: number; reactions: number };
+  total_comments?: number;
+  comments_count?: number;
+  total_reactions?: number;
+  reactions_summary?: { counts: { LIKE: number; LOVE: number; ANGRY: number } };
+  side_a_user?: { username?: string; is_anonymous?: boolean; id?: string };
+  side_a_username?: string;
+}
+
+/** Usuario activo del bloque "voting now" (GET /cases/active-users). */
+export interface ActiveUser {
+  id: string;
+  username: string;
+  avatar_url: string | null;
+  is_anonymous: boolean;
+}
+
+export interface ActiveUsersResponse {
+  users: ActiveUser[];
+  total: number;
+}
+
 export interface UserCaseListArgs {
   username: string;
   skip: number;
@@ -349,6 +383,23 @@ export const casesApi = createApi({
       invalidatesTags: (_result, _error, arg) =>
         arg.caseId ? [{ type: 'Case' as const, id: arg.caseId }] : [],
     }),
+
+    /**
+     * Casos en tendencia del sidebar (GET /cases/trending/top).
+     */
+    getTrendingCases: builder.query<TrendingCase[], void>({
+      query: () => ({ url: '/cases/trending/top' }),
+      transformResponse: (raw: unknown) => mapTrendingCases(raw),
+    }),
+
+    /**
+     * Usuarios votando ahora (GET /cases/active-users). El sidebar lo
+     * consume con polling de 30s; fuera del período activo no se pide.
+     */
+    getActiveUsers: builder.query<ActiveUsersResponse, void>({
+      query: () => ({ url: '/cases/active-users' }),
+      transformResponse: (raw: unknown) => mapActiveUsers(raw),
+    }),
   }),
 });
 
@@ -381,6 +432,59 @@ function mapCaseListResponse(raw: unknown, opts: { preferCaseId?: boolean } = {}
     return mapDbCaseToCase(normalized, currentUserId);
   });
   return { cases, hasMore: cases.length === PROFILE_PAGE_SIZE };
+}
+
+function optionalNumber(value: unknown): number | undefined {
+  return typeof value === 'number' ? value : undefined;
+}
+
+/**
+ * Normaliza el array de GET /cases/trending/top: garantiza los campos
+ * númericos y el autor del caso (side_a_user), dejando el resto del shape
+ * del backend tal cual (el sidebar no usa un Case completo).
+ */
+function mapTrendingCases(raw: unknown): TrendingCase[] {
+  const list = Array.isArray(raw) ? raw : [];
+  return list.map((item) => {
+    const row = item as Record<string, unknown>;
+    return {
+      id: String(row.id),
+      title: typeof row.title === 'string' ? row.title : '',
+      slug: row.slug as string | null | undefined,
+      category: typeof row.category === 'string' ? row.category : 'Other',
+      votes_a: Number(row.votes_a ?? 0),
+      votes_b: Number(row.votes_b ?? 0),
+      votes_both_wrong: Number(row.votes_both_wrong ?? 0),
+      _count: row._count as TrendingCase['_count'],
+      total_comments: optionalNumber(row.total_comments),
+      comments_count: optionalNumber(row.comments_count),
+      total_reactions: optionalNumber(row.total_reactions),
+      reactions_summary: row.reactions_summary as TrendingCase['reactions_summary'],
+      side_a_user: (row.side_a_user ?? {}) as TrendingCase['side_a_user'],
+      side_a_username: row.side_a_username as string | undefined,
+    };
+  });
+}
+
+/**
+ * Normaliza GET /cases/active-users → { users, total }. Tolera respuesta
+ * sin `users` o con filas incompletas.
+ */
+function mapActiveUsers(raw: unknown): ActiveUsersResponse {
+  const payload = (raw ?? {}) as Record<string, unknown>;
+  const list = Array.isArray(payload.users) ? (payload.users as unknown[]) : [];
+  return {
+    users: list.map((item) => {
+      const row = item as Record<string, unknown>;
+      return {
+        id: String(row.id),
+        username: String(row.username),
+        avatar_url: (row.avatar_url as string | null) ?? null,
+        is_anonymous: row.is_anonymous === true,
+      };
+    }),
+    total: Number(payload.total ?? 0),
+  };
 }
 
 function mergeCaseList(cache: CaseListResult, incoming: CaseListResult, skip: number): CaseListResult {
@@ -509,4 +613,6 @@ export const {
   useReactToCaseMutation,
   useCreateCaseMutation,
   useRespondCaseMutation,
+  useGetTrendingCasesQuery,
+  useGetActiveUsersQuery,
 } = casesApi;

@@ -464,3 +464,77 @@ describe('casesApi — createCase / respondCase', () => {
     );
   });
 });
+
+describe('casesApi — getTrendingCases', () => {
+  it('debería llamar a GET /cases/trending/top y normalizar filas', async () => {
+    mockRequest.mockResolvedValueOnce([
+      { id: 't1', title: 'Caso en tendencia', category: 'Work', votes_a: 3, votes_b: 7 },
+    ]);
+
+    const store = createStore();
+    await store.dispatch(casesApi.endpoints.getTrendingCases.initiate(undefined));
+
+    expect(mockRequest).toHaveBeenCalledWith(
+      expect.objectContaining({ url: '/cases/trending/top', method: 'GET' })
+    );
+
+    const { data } = casesApi.endpoints.getTrendingCases.select(undefined)(store.getState());
+    expect(data?.[0]).toMatchObject({
+      id: 't1',
+      title: 'Caso en tendencia',
+      category: 'Work',
+      votes_a: 3,
+      votes_b: 7,
+      votes_both_wrong: 0,
+      side_a_user: {},
+    });
+  });
+
+  it('debería devolver lista vacía si la respuesta no es un array', async () => {
+    mockRequest.mockResolvedValueOnce({ cases: [] });
+
+    const store = createStore();
+    await store.dispatch(casesApi.endpoints.getTrendingCases.initiate(undefined));
+
+    const { data } = casesApi.endpoints.getTrendingCases.select(undefined)(store.getState());
+    expect(data).toEqual([]);
+  });
+});
+
+describe('casesApi — getActiveUsers', () => {
+  it('debería llamar a GET /cases/active-users y normalizar { users, total }', async () => {
+    mockRequest.mockResolvedValueOnce({
+      users: [
+        { id: 'u1', username: 'ana', avatar_url: 'http://a/1.png', is_anonymous: false },
+        { id: 'u2', username: 'anon', avatar_url: null, is_anonymous: true },
+      ],
+      total: 2,
+    });
+
+    const store = createStore();
+    await store.dispatch(casesApi.endpoints.getActiveUsers.initiate(undefined));
+
+    expect(mockRequest).toHaveBeenCalledWith(
+      expect.objectContaining({ url: '/cases/active-users', method: 'GET' })
+    );
+
+    const { data } = casesApi.endpoints.getActiveUsers.select(undefined)(store.getState());
+    expect(data).toEqual({
+      users: [
+        { id: 'u1', username: 'ana', avatar_url: 'http://a/1.png', is_anonymous: false },
+        { id: 'u2', username: 'anon', avatar_url: null, is_anonymous: true },
+      ],
+      total: 2,
+    });
+  });
+
+  it('debería tolerar respuestas sin users o con total ausente', async () => {
+    mockRequest.mockResolvedValueOnce({ other: true });
+
+    const store = createStore();
+    await store.dispatch(casesApi.endpoints.getActiveUsers.initiate(undefined));
+
+    const { data } = casesApi.endpoints.getActiveUsers.select(undefined)(store.getState());
+    expect(data).toEqual({ users: [], total: 0 });
+  });
+});
