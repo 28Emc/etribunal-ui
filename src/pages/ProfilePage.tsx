@@ -7,7 +7,6 @@ import type { Case, User } from '@typings/index';
 import { cn, getCasePath } from '@utils/helpers';
 import { apiClient } from '@api/client';
 import { Skeleton } from '@components/ui/Skeleton';
-import { mapDbCaseToCase } from '@shared/utils/caseMapper';
 import { DeleteAccountModal } from '@components/ui/DeleteAccountModal';
 import { useToast } from '@components/ui/Toast';
 import { ProfileHeader } from '@components/ui/ProfileHeader';
@@ -20,8 +19,18 @@ import type { ShareType } from '@hooks/useShare';
 import { useInfiniteScroll } from '@shared/hooks/useInfiniteScroll';
 import { SEO } from '@shared/components/SEO';
 import { CaseCard } from '@components/ui/CaseCard';
-import { useVoteCaseMutation, useReactToCaseMutation, useSaveCaseMutation } from '@redux/services/casesApi';
+import {
+  useGetUserCasesQuery,
+  useGetSavedCasesQuery,
+  useGetUserVotesQuery,
+  useVoteCaseMutation,
+  useReactToCaseMutation,
+  useSaveCaseMutation,
+  incrementCaseCommentsCount,
+  PROFILE_PAGE_SIZE,
+} from '@redux/services/casesApi';
 import { useAddCommentMutation } from '@redux/services/commentsApi';
+import { useAppDispatch } from '@redux/hooks';
 
 export const ProfilePage: React.FC = () => {
   const { username } = useParams<{ username: string }>();
@@ -29,6 +38,7 @@ export const ProfilePage: React.FC = () => {
   const { t } = useTranslation();
   const { addToast } = useToast();
   const { currentUser, logout, setCurrentUser } = useAuth();
+  const dispatch = useAppDispatch();
   const [voteCase] = useVoteCaseMutation();
   const [saveCase] = useSaveCaseMutation();
   const [reactToCase] = useReactToCaseMutation();
@@ -52,37 +62,52 @@ export const ProfilePage: React.FC = () => {
   const [showDeleteModal, setShowDeleteModal] = useState(false);
   const [showAvatarEditModal, setShowAvatarEditModal] = useState(false);
   const [savedCasesTab, setSavedCasesTab] = useState<'created' | 'saved' | 'voted'>('created');
-  const [savedCases, setSavedCases] = useState<any[]>([]);
-  const [createdCases, setCreatedCases] = useState<any[]>([]);
-  const [votedCases, setVotedCases] = useState<any[]>([]);
-  const [loadingSavedCases, setLoadingSavedCases] = useState(false);
   const [isVoting, setIsVoting] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
   const [isReacting, setIsReacting] = useState(false);
 
   const [skipCreated, setSkipCreated] = useState(0);
-  const [hasMoreCreated, setHasMoreCreated] = useState(true);
   const [skipSaved, setSkipSaved] = useState(0);
-  const [hasMoreSaved, setHasMoreSaved] = useState(true);
   const [skipVoted, setSkipVoted] = useState(0);
-  const [hasMoreVoted, setHasMoreVoted] = useState(true);
-  const TAKE = 10;
 
-  const updateCaseInProfile = useCallback((caseId: string, updates: Partial<Case>) => {
-    setCreatedCases(prev => prev.map(c => c.id === caseId ? { ...c, ...updates } : c));
-    setSavedCases(prev => prev.map(c => c.id === caseId ? { ...c, ...updates } : c));
-    setVotedCases(prev => prev.map(c => c.id === caseId ? { ...c, ...updates } : c));
-  }, []);
+  // Listas del perfil vía RTK Query. Cada query es un scroll infinito
+  // (serializeQueryArgs por username, merge concatenado, hasMore según la
+  // última página); vote/save/reacción se reflejan solos vía applyCasePatch.
+  const createdQuery = useGetUserCasesQuery(
+    { username: targetUsername ?? '', skip: skipCreated, take: PROFILE_PAGE_SIZE },
+    { skip: !targetUsername }
+  );
+  const savedQuery = useGetSavedCasesQuery(
+    { skip: skipSaved, take: PROFILE_PAGE_SIZE },
+    { skip: !isOwnProfile }
+  );
+  const votedQuery = useGetUserVotesQuery(
+    { skip: skipVoted, take: PROFILE_PAGE_SIZE },
+    { skip: !isOwnProfile }
+  );
+
+  const createdCases = createdQuery.data?.cases ?? [];
+  const savedCases = savedQuery.data?.cases ?? [];
+  const votedCases = votedQuery.data?.cases ?? [];
+  const hasMoreCreated = createdQuery.data ? createdQuery.data.hasMore : true;
+  const hasMoreSaved = savedQuery.data ? savedQuery.data.hasMore : true;
+  const hasMoreVoted = votedQuery.data ? votedQuery.data.hasMore : true;
+  let loadingSavedCases: boolean;
+  if (savedCasesTab === 'created') {
+    loadingSavedCases = createdQuery.isFetching;
+  } else if (savedCasesTab === 'saved') {
+    loadingSavedCases = savedQuery.isFetching;
+  } else {
+    loadingSavedCases = votedQuery.isFetching;
+  }
 
   useEffect(() => {
     if (targetUsername) {
       fetchProfile();
-      fetchCreatedCases();
-      if (isOwnProfile) {
-        fetchSavedCases();
-        fetchVotedCases();
-      }
     }
+    setSkipCreated(0);
+    setSkipSaved(0);
+    setSkipVoted(0);
   }, [targetUsername, isOwnProfile]);
 
   const fetchProfile = async () => {
@@ -171,108 +196,40 @@ export const ProfilePage: React.FC = () => {
     }
   };
 
-  const fetchCreatedCases = async (skip: number = 0) => {
-    if (skip === 0) setLoadingSavedCases(true);
-    try {
-      const data = await apiClient.get<any>(`/users/${targetUsername}/cases?skip=${skip}&take=${TAKE}`);
-      const rawCases = Array.isArray(data) ? data : (data.cases || []);
-      const mapped = rawCases.map((c: any) => mapDbCaseToCase(c, currentUser?.id));
-
-      if (skip === 0) {
-        setCreatedCases(mapped);
-      } else {
-        setCreatedCases(prev => [...prev, ...mapped]);
-      }
-      setHasMoreCreated(mapped.length === TAKE);
-      setSkipCreated(skip + mapped.length);
-    } catch (err) {
-      console.error('Error fetching created cases', err);
-    } finally {
-      setLoadingSavedCases(false);
-    }
-  };
-
-  const fetchSavedCases = async (skip: number = 0) => {
-    if (!isOwnProfile) return;
-    if (skip === 0) setLoadingSavedCases(true);
-    try {
-      const data = await apiClient.get<any>(`/saved-cases?skip=${skip}&take=${TAKE}`);
-      const rawCases = Array.isArray(data) ? data : (data.cases || []);
-      const mapped = rawCases.map((c: any) => {
-        const normalized = { ...c, id: c.case_id || c.id };
-        return mapDbCaseToCase(normalized, currentUser?.id);
-      });
-
-      if (skip === 0) {
-        setSavedCases(mapped);
-      } else {
-        setSavedCases(prev => [...prev, ...mapped]);
-      }
-      setHasMoreSaved(mapped.length === TAKE);
-      setSkipSaved(skip + mapped.length);
-    } catch (err) {
-      console.error('Error fetching saved cases', err);
-    } finally {
-      setLoadingSavedCases(false);
-    }
-  };
-
-  const fetchVotedCases = async (skip: number = 0) => {
-    if (!isOwnProfile) return;
-    if (skip === 0) setLoadingSavedCases(true);
-    try {
-      const data = await apiClient.get<any>(`/users/me/votes?skip=${skip}&take=${TAKE}`);
-      const rawCases = Array.isArray(data) ? data : (data.cases || []);
-      const mapped = rawCases.map((c: any) => mapDbCaseToCase(c, currentUser?.id));
-
-      if (skip === 0) {
-        setVotedCases(mapped);
-      } else {
-        setVotedCases(prev => [...prev, ...mapped]);
-      }
-      setHasMoreVoted(mapped.length === TAKE);
-      setSkipVoted(skip + mapped.length);
-    } catch (err) {
-      console.error('Error fetching voted cases', err);
-    } finally {
-      setLoadingSavedCases(false);
-    }
-  };
-
   const loadMoreCreated = () => {
-    if (hasMoreCreated && !loadingSavedCases) {
-      fetchCreatedCases(skipCreated);
+    if (hasMoreCreated && !createdQuery.isFetching) {
+      setSkipCreated(prev => prev + PROFILE_PAGE_SIZE);
     }
   };
 
   const loadMoreSaved = () => {
-    if (hasMoreSaved && !loadingSavedCases) {
-      fetchSavedCases(skipSaved);
+    if (hasMoreSaved && !savedQuery.isFetching) {
+      setSkipSaved(prev => prev + PROFILE_PAGE_SIZE);
     }
   };
 
   const loadMoreVoted = () => {
-    if (hasMoreVoted && !loadingSavedCases) {
-      fetchVotedCases(skipVoted);
+    if (hasMoreVoted && !votedQuery.isFetching) {
+      setSkipVoted(prev => prev + PROFILE_PAGE_SIZE);
     }
   };
 
   const { loadMoreRef: loadMoreCreatedRef } = useInfiniteScroll({
     onLoadMore: loadMoreCreated,
     hasMore: hasMoreCreated,
-    isLoading: loadingSavedCases
+    isLoading: createdQuery.isFetching
   });
 
   const { loadMoreRef: loadMoreSavedRef } = useInfiniteScroll({
     onLoadMore: loadMoreSaved,
     hasMore: hasMoreSaved,
-    isLoading: loadingSavedCases
+    isLoading: savedQuery.isFetching
   });
 
   const { loadMoreRef: loadMoreVotedRef } = useInfiniteScroll({
     onLoadMore: loadMoreVoted,
     hasMore: hasMoreVoted,
-    isLoading: loadingSavedCases
+    isLoading: votedQuery.isFetching
   });
 
   const handleDeleteAccount = async () => {
@@ -303,13 +260,9 @@ export const ProfilePage: React.FC = () => {
     setIsVoting(true);
     try {
       const apiSide = side === 'BothWrong' ? 'BOTH_WRONG' : side;
-      const data = await voteCase({ caseId, voteType: apiSide }).unwrap();
-      updateCaseInProfile(caseId, {
-        votesA: data.votes_a,
-        votesB: data.votes_b,
-        votesBothWrong: data.votes_both_wrong,
-        userVote: data.vote_type,
-      });
+      // Contadores y userVote se actualizan en la cache (feed, detalle,
+      // listas de perfil) vía applyCasePatch al completarse la mutación.
+      await voteCase({ caseId, voteType: apiSide }).unwrap();
       const updatedUser = {
         ...currentUser,
         votes: { ...currentUser.votes, [caseId]: apiSide }
@@ -321,61 +274,44 @@ export const ProfilePage: React.FC = () => {
     } finally {
       setIsVoting(false);
     }
-  }, [currentUser, voteCase, setCurrentUser, updateCaseInProfile, navigate]);
+  }, [currentUser, voteCase, setCurrentUser, navigate]);
 
   const handleToggleSave = useCallback(async (caseId: string) => {
     if (!currentUser) { navigate('/login'); return; }
     setIsSaving(true);
     try {
-      const data = await saveCase({ caseId }).unwrap();
-      updateCaseInProfile(caseId, {
-        isSaved: data.saved,
-        anchorsCount: data.anchorsCount,
-      });
+      // isSaved/anchorsCount se actualizan en la cache vía applyCasePatch.
+      await saveCase({ caseId }).unwrap();
     } catch (error) {
       console.error('Error toggling save:', error);
     } finally {
       setIsSaving(false);
     }
-  }, [currentUser, saveCase, updateCaseInProfile, navigate]);
+  }, [currentUser, saveCase, navigate]);
 
   const handleReaction = useCallback(async (caseId: string, emoji: 'LIKE' | 'LOVE' | 'ANGRY') => {
     if (!currentUser) { navigate('/login'); return; }
     setIsReacting(true);
     try {
-      const data = await reactToCase({ caseId, emoji }).unwrap();
-      const formattedReactions = { LIKE: 0, LOVE: 0, ANGRY: 0 };
-      data.reactions.forEach((r) => {
-        if (formattedReactions[r.emoji] !== undefined) {
-          formattedReactions[r.emoji] = r.count;
-        }
-      });
-      updateCaseInProfile(caseId, {
-        reactions: formattedReactions,
-        userReaction: data.user_reaction,
-      });
+      // reactions/userReaction se actualizan en la cache vía applyCasePatch.
+      await reactToCase({ caseId, emoji }).unwrap();
     } catch (error) {
       console.error('Error reacting:', error);
     } finally {
       setIsReacting(false);
     }
-  }, [currentUser, reactToCase, updateCaseInProfile, navigate]);
+  }, [currentUser, reactToCase, navigate]);
 
   const handleAddComment = useCallback(async (caseId: string, text: string) => {
     if (!currentUser) { navigate('/login'); return; }
     try {
       await addComment({ caseId, content: text }).unwrap();
-      const current = createdCases.find(c => c.id === caseId);
-      if (current) {
-        updateCaseInProfile(caseId, {
-          commentsCount: (current.commentsCount || 0) + 1,
-        });
-      }
+      dispatch(incrementCaseCommentsCount(caseId));
     } catch (error) {
       console.error('Error adding comment:', error);
       throw error;
     }
-  }, [currentUser, addComment, updateCaseInProfile, createdCases, navigate]);
+  }, [currentUser, addComment, dispatch, navigate]);
 
   const handleShareOpen = useCallback((caseId: string) => {
     const c = createdCases.find(item => item.id === caseId) ||
@@ -496,10 +432,7 @@ export const ProfilePage: React.FC = () => {
 
               <div className="flex gap-2 flex-wrap">
                 <button
-                  onClick={() => {
-                    setSavedCasesTab('created');
-                    fetchCreatedCases();
-                  }}
+                  onClick={() => setSavedCasesTab('created')}
                   className={cn(
                     "flex items-center gap-2 px-4 py-2 rounded-full text-[10px] font-black uppercase tracking-widest transition-colors",
                     savedCasesTab === 'created' ? "bg-primary text-white" : "bg-border-main/10 text-text-muted hover:text-text-main"
@@ -511,10 +444,7 @@ export const ProfilePage: React.FC = () => {
                 {isOwnProfile && (
                   <>
                     <button
-                      onClick={() => { 
-                        setSavedCasesTab('saved'); 
-                        fetchSavedCases(); 
-                      }}
+                      onClick={() => setSavedCasesTab('saved')}
                       className={cn(
                         "flex items-center gap-2 px-4 py-2 rounded-full text-[10px] font-black uppercase tracking-widest transition-colors",
                         savedCasesTab === 'saved' ? "bg-primary text-white" : "bg-border-main/10 text-text-muted hover:text-text-main"
@@ -524,10 +454,7 @@ export const ProfilePage: React.FC = () => {
                       {t('profile.anclados')}
                     </button>
                     <button
-                      onClick={() => { 
-                        setSavedCasesTab('voted'); 
-                        fetchVotedCases(); 
-                      }}
+                      onClick={() => setSavedCasesTab('voted')}
                       className={cn(
                         "flex items-center gap-2 px-4 py-2 rounded-full text-[10px] font-black uppercase tracking-widest transition-colors",
                         savedCasesTab === 'voted' ? "bg-primary text-white" : "bg-border-main/10 text-text-muted hover:text-text-main"

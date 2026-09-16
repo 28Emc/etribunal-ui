@@ -303,3 +303,82 @@ describe('casesApi — getCase (detalle)', () => {
     expect(detail.data?.userVote).toBe('B');
   });
 });
+
+describe('casesApi — listas del perfil', () => {
+  it('getUserCases debería llamar a GET /users/:username/cases con params', async () => {
+    mockRequest.mockResolvedValueOnce([rawCase('c1')]);
+
+    const store = createStore();
+    await store.dispatch(casesApi.endpoints.getUserCases.initiate({ username: 'ana', skip: 0, take: 10 }));
+
+    expect(mockRequest).toHaveBeenCalledWith(
+      expect.objectContaining({
+        url: '/users/ana/cases',
+        params: { skip: 0, take: 10 },
+      })
+    );
+
+    const state = store.getState();
+    const { data } = casesApi.endpoints.getUserCases.select({ username: 'ana', skip: 0, take: 10 })(state);
+    expect(data?.cases).toHaveLength(1);
+    expect(data?.cases[0]?.id).toBe('c1');
+  });
+
+  it('getSavedCases debería normalizar id desde case_id (respuesta { cases })', async () => {
+    mockRequest.mockResolvedValueOnce({ cases: [{ case_id: 'c9', id: 'row-1', title: 'Saved' }], total: 1 });
+
+    const store = createStore();
+    await store.dispatch(casesApi.endpoints.getSavedCases.initiate({ skip: 0, take: 10 }));
+
+    const state = store.getState();
+    const { data } = casesApi.endpoints.getSavedCases.select({ skip: 0, take: 10 })(state);
+    expect(data?.cases[0]?.id).toBe('c9');
+  });
+
+  it('getUserVotes debería llamar a GET /users/me/votes', async () => {
+    mockRequest.mockResolvedValueOnce([rawCase('c2')]);
+
+    const store = createStore();
+    await store.dispatch(casesApi.endpoints.getUserVotes.initiate({ skip: 0, take: 10 }));
+
+    expect(mockRequest).toHaveBeenCalledWith(
+      expect.objectContaining({ url: '/users/me/votes', params: { skip: 0, take: 10 } })
+    );
+  });
+
+  it('getUserCases debería concatenar páginas con merge y hasMore', async () => {
+    mockRequest
+      .mockResolvedValueOnce(Array.from({ length: 10 }, (_, i) => rawCase(`c${i}`)))
+      .mockResolvedValueOnce(Array.from({ length: 5 }, (_, i) => rawCase(`c${i + 10}`)));
+
+    const store = createStore();
+    await store.dispatch(casesApi.endpoints.getUserCases.initiate({ username: 'ana', skip: 0, take: 10 }));
+    await store.dispatch(casesApi.endpoints.getUserCases.initiate({ username: 'ana', skip: 10, take: 10 }));
+
+    const state = store.getState();
+    const { data } = casesApi.endpoints.getUserCases.select({ username: 'ana', skip: 0, take: 10 })(state);
+    expect(data?.cases).toHaveLength(15);
+    expect(data?.hasMore).toBe(false);
+  });
+
+  it('voteCase debería actualizar también la cache de getUserCases', async () => {
+    mockRequest.mockResolvedValueOnce([rawCase('c1', 5)]);
+
+    const store = createStore();
+    await store.dispatch(casesApi.endpoints.getUserCases.initiate({ username: 'ana', skip: 0, take: 10 }));
+
+    mockRequest.mockResolvedValueOnce({
+      vote_type: 'B',
+      votes_a: 5,
+      votes_b: 6,
+      votes_both_wrong: 0,
+    });
+    await store.dispatch(casesApi.endpoints.voteCase.initiate({ caseId: 'c1', voteType: 'B' }));
+    await flush();
+
+    const state = store.getState();
+    const { data } = casesApi.endpoints.getUserCases.select({ username: 'ana', skip: 0, take: 10 })(state);
+    expect(data?.cases[0]?.votesB).toBe(6);
+    expect(data?.cases[0]?.userVote).toBe('B');
+  });
+});

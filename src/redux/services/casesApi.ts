@@ -39,6 +39,9 @@ import { toReactionCounts, type ReactionEmoji, type ReactionPayload } from './re
 
 export const FEED_PAGE_SIZE = 20;
 
+/** Tamaño de página de las listas del perfil (created/saved/voted). */
+export const PROFILE_PAGE_SIZE = 10;
+
 // ============================================================
 // Tipos públicos
 // ============================================================
@@ -65,6 +68,22 @@ export interface VotePayload {
 export interface SavePayload {
   saved: boolean;
   anchorsCount: number;
+}
+
+export interface UserCaseListArgs {
+  username: string;
+  skip: number;
+  take: number;
+}
+
+export interface ProfileCaseListArgs {
+  skip: number;
+  take: number;
+}
+
+export interface CaseListResult {
+  cases: Case[];
+  hasMore: boolean;
 }
 
 // ============================================================
@@ -125,6 +144,46 @@ export const casesApi = createApi({
         return mapDbCaseToCase(raw as Record<string, unknown>, authStorage.getUserId() ?? undefined);
       },
       providesTags: (_result, _error, id) => [{ type: 'Case' as const, id }],
+    }),
+
+    /**
+     * Casos creados por un usuario (tab "created" del perfil). Paginación
+     * infinita: serializa por username, forceRefetch al cambiar skip y merge
+     * concatena (dedup por id). La cache es la fuente de verdad de la lista;
+     * applyCasePatch mantiene voto/save/reacción coherentes.
+     */
+    getUserCases: builder.query<CaseListResult, UserCaseListArgs>({
+      query: ({ username, skip, take }) => ({
+        url: `/users/${username}/cases`,
+        params: { skip, take },
+      }),
+      serializeQueryArgs: ({ queryArgs }) => `user-cases|${queryArgs.username}`,
+      transformResponse: (raw: unknown) => mapCaseListResponse(raw),
+      merge: (cache, incoming, { arg }) => mergeCaseList(cache, incoming, arg.skip),
+      forceRefetch: ({ currentArg, previousArg }) => currentArg?.skip !== previousArg?.skip,
+    }),
+
+    /**
+     * Casos guardados del usuario logueado (tab "saved"). Cada item de la
+     * respuesta trae `case_id` y `id`; el mapper normaliza a `id` el caso.
+     */
+    getSavedCases: builder.query<CaseListResult, ProfileCaseListArgs>({
+      query: ({ skip, take }) => ({ url: '/saved-cases', params: { skip, take } }),
+      serializeQueryArgs: () => 'saved-cases',
+      transformResponse: (raw: unknown) => mapCaseListResponse(raw, { preferCaseId: true }),
+      merge: (cache, incoming, { arg }) => mergeCaseList(cache, incoming, arg.skip),
+      forceRefetch: ({ currentArg, previousArg }) => currentArg?.skip !== previousArg?.skip,
+    }),
+
+    /**
+     * Casos donde el usuario logueado ha votado (tab "voted").
+     */
+    getUserVotes: builder.query<CaseListResult, ProfileCaseListArgs>({
+      query: ({ skip, take }) => ({ url: '/users/me/votes', params: { skip, take } }),
+      serializeQueryArgs: () => 'user-votes',
+      transformResponse: (raw: unknown) => mapCaseListResponse(raw),
+      merge: (cache, incoming, { arg }) => mergeCaseList(cache, incoming, arg.skip),
+      forceRefetch: ({ currentArg, previousArg }) => currentArg?.skip !== previousArg?.skip,
     }),
 
     /**
@@ -230,6 +289,38 @@ export const casesApi = createApi({
 
 type CaseUpdater = (draft: Case) => void;
 
+/**
+ * Normaliza la respuesta de las listas del perfil. El backend devuelve un
+ * array (disponible en GET /users/:username/cases y /users/me/votes) o un
+ * objeto `{ cases, total }` (GET /saved-cases). Con preferCaseId=true se
+ * normaliza el id desde `case_id` (shape de saved-cases).
+ */
+function mapCaseListResponse(raw: unknown, opts: { preferCaseId?: boolean } = {}): CaseListResult {
+  const currentUserId = authStorage.getUserId() ?? undefined;
+  const nested = (raw as Record<string, unknown> | undefined)?.cases;
+  let list: unknown[] = [];
+  if (Array.isArray(raw)) {
+    list = raw;
+  } else if (Array.isArray(nested)) {
+    list = nested;
+  }
+  const cases = list.map((item) => {
+    const c = item as Record<string, unknown>;
+    const normalized: Record<string, unknown> = opts.preferCaseId
+      ? { ...c, id: c.case_id ?? c.id }
+      : c;
+    return mapDbCaseToCase(normalized, currentUserId);
+  });
+  return { cases, hasMore: cases.length === PROFILE_PAGE_SIZE };
+}
+
+function mergeCaseList(cache: CaseListResult, incoming: CaseListResult, skip: number): CaseListResult {
+  if (skip === 0 || !cache) return incoming;
+  const unique = new Map<string, Case>(cache.cases.map((c) => [c.id, c]));
+  for (const next of incoming.cases) unique.set(next.id, next);
+  return { cases: [...unique.values()], hasMore: incoming.hasMore };
+}
+
 function getCachedFeedArgs(getState: () => unknown): FeedArgs[] {
   return casesApi.util.selectCachedArgsForQuery(getState() as never, 'getFeed') as FeedArgs[];
 }
@@ -239,13 +330,38 @@ function getCachedDetailArgs(getState: () => unknown): string[] {
 }
 
 /**
- * Aplica un cambio a un caso en TODAS las entradas cacheadas del feed
- * (selectCachedArgsForQuery itera cada argumento real de getFeed) y en
- * el detalle. No-op si la cache no existe aún.
+ * Aplica un cambio a un caso en las listas del perfil cacheadas
+ * (getUserCases/getSavedCases/getUserVotes). selectCachedArgsForQuery
+ * devuelve los arg originales de cada entrada; updateQueryData re-serializa
+ * el arg para localizar su cache key (ver getFeed).
  */
-function applyCasePatch(dispatch: AppDispatch, getState: () => unknown, caseId: string, updater: CaseUpdater) {
-  const feedArgsList = getCachedFeedArgs(getState);
-  for (const args of feedArgsList) {
+function patchListCaches(dispatch: AppDispatch, getState: () => unknown, caseId: string, updater: CaseUpdater) {
+  const patchWith = (draft: CaseListResult) => {
+    const target = draft.cases.find((c) => c.id === caseId);
+    if (target) updater(target);
+  };
+
+  const userArgs = casesApi.util.selectCachedArgsForQuery(getState() as never, 'getUserCases') as unknown as UserCaseListArgs[];
+  for (const args of userArgs) {
+    dispatch(casesApi.util.updateQueryData('getUserCases', args, patchWith));
+  }
+  const savedArgs = casesApi.util.selectCachedArgsForQuery(getState() as never, 'getSavedCases') as unknown as ProfileCaseListArgs[];
+  for (const args of savedArgs) {
+    dispatch(casesApi.util.updateQueryData('getSavedCases', args, patchWith));
+  }
+  const votedArgs = casesApi.util.selectCachedArgsForQuery(getState() as never, 'getUserVotes') as unknown as ProfileCaseListArgs[];
+  for (const args of votedArgs) {
+    dispatch(casesApi.util.updateQueryData('getUserVotes', args, patchWith));
+  }
+}
+
+/**
+ * Aplica un cambio a un caso en TODAS las entradas cacheadas que lo
+ * contienen: feed (getFeed), detalle (getCase — keyed por id o slug) y las
+ * listas del perfil. No-op si la cache no existe aún.
+ */
+function forEachCachedCase(dispatch: AppDispatch, getState: () => unknown, caseId: string, updater: CaseUpdater) {
+  for (const args of getCachedFeedArgs(getState)) {
     dispatch(
       casesApi.util.updateQueryData('getFeed', args, (draft) => {
         const target = draft.cases.find((c) => c.id === caseId);
@@ -253,8 +369,6 @@ function applyCasePatch(dispatch: AppDispatch, getState: () => unknown, caseId: 
       })
     );
   }
-  // Detalle: la cache puede estar keyed por UUID o por username/slug,
-  // así que se parchea cualquier entrada cuya data.id sea el caso.
   for (const key of getCachedDetailArgs(getState)) {
     dispatch(
       casesApi.util.updateQueryData('getCase', key, (draft) => {
@@ -262,6 +376,11 @@ function applyCasePatch(dispatch: AppDispatch, getState: () => unknown, caseId: 
       })
     );
   }
+  patchListCaches(dispatch, getState, caseId, updater);
+}
+
+function applyCasePatch(dispatch: AppDispatch, getState: () => unknown, caseId: string, updater: CaseUpdater) {
+  forEachCachedCase(dispatch, getState, caseId, updater);
 }
 
 /**
@@ -282,27 +401,26 @@ export function prependCaseToFeed(newCase: Case): ThunkAction<void, RootState, u
 }
 
 /**
- * Incrementa sharesCount en todas las entradas del feed y el detalle.
- * Se exporta como thunk para usarse desde FeedPage (ShareModal).
+ * Incrementa sharesCount en todas las entradas cacheadas (feed, detalle y
+ * listas del perfil). Se exporta como thunk para FeedPage (ShareModal).
  */
 export function incrementCaseShareCount(caseId: string): ThunkAction<void, RootState, unknown, UnknownAction> {
   return (dispatch, getState) => {
-    const feedArgsList = getCachedFeedArgs(getState);
-    for (const args of feedArgsList) {
-      dispatch(
-        casesApi.util.updateQueryData('getFeed', args, (draft) => {
-          const target = draft.cases.find((c) => c.id === caseId);
-          if (target) target.sharesCount = (target.sharesCount ?? 0) + 1;
-        })
-      );
-    }
-    for (const key of getCachedDetailArgs(getState)) {
-      dispatch(
-        casesApi.util.updateQueryData('getCase', key, (draft) => {
-          if (draft.id === caseId) draft.sharesCount = (draft.sharesCount ?? 0) + 1;
-        })
-      );
-    }
+    forEachCachedCase(dispatch as unknown as AppDispatch, getState, caseId, (draft) => {
+      draft.sharesCount = (draft.sharesCount ?? 0) + 1;
+    });
+  };
+}
+
+/**
+ * Incrementa commentsCount tras publicar un comentario (contador optimista).
+ * Se exporta como thunk para ProfilePage y CaseDetailPage.
+ */
+export function incrementCaseCommentsCount(caseId: string): ThunkAction<void, RootState, unknown, UnknownAction> {
+  return (dispatch, getState) => {
+    forEachCachedCase(dispatch as unknown as AppDispatch, getState, caseId, (draft) => {
+      draft.commentsCount = (draft.commentsCount ?? 0) + 1;
+    });
   };
 }
 
@@ -313,6 +431,9 @@ export function incrementCaseShareCount(caseId: string): ThunkAction<void, RootS
 export const {
   useGetFeedQuery,
   useGetCaseQuery,
+  useGetUserCasesQuery,
+  useGetSavedCasesQuery,
+  useGetUserVotesQuery,
   useVoteCaseMutation,
   useRemoveVoteMutation,
   useSaveCaseMutation,

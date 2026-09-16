@@ -167,9 +167,9 @@ function normalizeCommentTimestamp(value: unknown): string {
 /**
  * Transforma un caso crudo del backend al formato Case del frontend.
  *
- * Es el mapper principal de la aplicación. Se llama desde:
- *   - casesApi (getFeed / getCase)
- *   - CaseDetailPage y ProfilePage (fetch directo de apiClient)
+ * Es el mapper principal de la aplicación. Se llama desde casesApi
+ * (getFeed / getCase / getUserCases / getSavedCases / getUserVotes).
+ * Los consumidores ya no hacen fetch directo con apiClient.
  *
  * @param dbCase - Objeto crudo del backend
  * @param currentUserId - ID del usuario actual
