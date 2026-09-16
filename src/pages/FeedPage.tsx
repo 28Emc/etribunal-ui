@@ -8,7 +8,6 @@ import { TopJudgesList } from '@layout/TopJudgesList';
 import { FeedSkeleton, EmptyState } from '@components/ui';
 import { Tooltip } from '@components/ui/Tooltip';
 import { useAuth } from '@context/AuthContext';
-import { useComments } from '@hooks/useComments';
 import { useToast } from '@components/ui/Toast';
 import type { Case, FeedTab } from '@typings/index';
 import { apiClient } from '@api/client';
@@ -27,6 +26,7 @@ import {
   useReactToCaseMutation,
   type FeedArgs,
 } from '@redux/services/casesApi';
+import { useAddCommentMutation } from '@redux/services/commentsApi';
 
 interface FeedPageProps {
   initialTab?: 'for_you' | 'following' | 'trending' | 'top-judges';
@@ -40,7 +40,7 @@ export function FeedPage({ initialTab = 'for_you' }: FeedPageProps) {
   const dispatch = useAppDispatch();
   const { currentUser, setCurrentUser } = useAuth();
 
-  const { addComment } = useComments();
+  const [addComment] = useAddCommentMutation();
   const { addToast } = useToast();
 
   const showToast = (msg: string, type: 'success' | 'error' | 'info' | 'warning') => addToast(type, msg);
@@ -242,7 +242,7 @@ export function FeedPage({ initialTab = 'for_you' }: FeedPageProps) {
       return;
     }
     try {
-      await addComment(caseId, text, parentId);
+      await addComment({ caseId, content: text, parentId }).unwrap();
       await refetch();
       showToast(t('toasts.verdictSentSuccess'), 'success');
     } catch (error) {

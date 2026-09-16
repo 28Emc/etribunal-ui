@@ -10,10 +10,10 @@ import { EditCaseModal, type EditCasePayload } from '@components/ui/EditCaseModa
 import { useAuth } from '@context/AuthContext';
 import { useVote } from '@hooks/useVote';
 import { useReactions } from '@hooks/useReactions';
-import { useComments } from '@hooks/useComments';
+import { useCommentsData } from '@hooks/useCommentsData';
 import { useSavedCases } from '@hooks/useSavedCases';
 import { apiClient } from '@api/client';
-import { mapDbCaseToCase, mapDbCommentToComment } from '@shared/utils/caseMapper';
+import { mapDbCaseToCase } from '@shared/utils/caseMapper';
 import type { Case, CaseComment } from '@typings/index';
 import { useToast } from '@components/ui/Toast';
 import { useTranslation } from 'react-i18next';
@@ -56,8 +56,13 @@ export function CaseDetailPage() {
 
   const { voteForCase } = useVote();
   const { toggleReaction } = useReactions();
-  const commentsHook = useComments();
-  const { addComment, deleteComment, fetchInitialComments, checkForNewComments, showNewComments, fetchOlderComments } = commentsHook;
+  const commentsData = useCommentsData(caseData?.id);
+  const {
+    addComment,
+    deleteComment,
+    showNewComments,
+    fetchOlderComments,
+  } = commentsData;
   const { toggleSave } = useSavedCases();
 
   // Determine the correct API endpoint based on route params
@@ -73,11 +78,9 @@ export function CaseDetailPage() {
       setIsLoading(true);
       try {
         const caseRes = await apiClient.get<any>(fetchCaseUrl);
-        
-        await fetchInitialComments(caseRes.id);
-        
+
         const mappedCase = mapDbCaseToCase(caseRes, currentUser?.id);
-        
+
         setCaseData(mappedCase);
       } catch (error) {
         console.error('Error fetching case:', error);
@@ -88,18 +91,7 @@ export function CaseDetailPage() {
       }
     };
     fetchSingleCase();
-  }, [fetchCaseUrl, currentUser?.id, fetchInitialComments]);
-
-  useEffect(() => {
-    if (!caseData?.id) return;
-
-    const checkNewComments = async () => {
-      const newCount = await checkForNewComments(caseData.id);
-    };
-
-    const interval = setInterval(checkNewComments, 15000);
-    return () => clearInterval(interval);
-  }, [caseData?.id, checkForNewComments]);
+  }, [fetchCaseUrl, currentUser?.id]);
 
   const handleShowNewComments = () => {
     showNewComments();
@@ -427,18 +419,13 @@ if (isLoading) {
         userReaction={caseData.userReaction}
         onOpenAuth={() => navigate('/login')}
         isModal={false}
-        visibleComments={commentsHook.visibleComments}
-        pendingComments={commentsHook.pendingComments}
-        pendingCount={commentsHook.pendingCount}
-        hasMore={commentsHook.hasMore}
-        nextCursor={commentsHook.nextCursor}
-        isFetching={commentsHook.isFetching}
-        isPollingEnabled={commentsHook.isPollingEnabled}
-        fetchInitialComments={commentsHook.fetchInitialComments}
-        fetchOlderComments={commentsHook.fetchOlderComments}
-        checkForNewComments={commentsHook.checkForNewComments}
-        showNewComments={commentsHook.showNewComments}
-        hideNewCommentsIndicator={commentsHook.hideNewCommentsIndicator}
+        visibleComments={commentsData.visibleComments}
+        pendingCount={commentsData.pendingCount}
+        hasMore={commentsData.hasMore}
+        nextCursor={commentsData.nextCursor}
+        isFetching={commentsData.isFetching}
+        fetchOlderComments={commentsData.fetchOlderComments}
+        showNewComments={commentsData.showNewComments}
       />
     </div>
 

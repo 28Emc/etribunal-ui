@@ -23,7 +23,7 @@ import { CaseCard } from '@components/ui/CaseCard';
 import { useVote } from '@hooks/useVote';
 import { useSavedCases } from '@hooks/useSavedCases';
 import { useReactions } from '@hooks/useReactions';
-import { useComments } from '@hooks/useComments';
+import { useAddCommentMutation } from '@redux/services/commentsApi';
 
 export const ProfilePage: React.FC = () => {
   const { username } = useParams<{ username: string }>();
@@ -34,7 +34,7 @@ export const ProfilePage: React.FC = () => {
   const { voteForCase } = useVote();
   const { toggleSave: toggleSaveCase } = useSavedCases();
   const { toggleReaction: toggleCaseReaction } = useReactions();
-  const { addComment } = useComments();
+  const [addComment] = useAddCommentMutation();
 
   const targetUsername = username || currentUser?.name;
   const isOwnProfile = currentUser?.name === targetUsername;
@@ -365,7 +365,7 @@ export const ProfilePage: React.FC = () => {
   const handleAddComment = useCallback(async (caseId: string, text: string) => {
     if (!currentUser) { navigate('/login'); return; }
     try {
-      await addComment(caseId, text);
+      await addComment({ caseId, content: text }).unwrap();
       const current = createdCases.find(c => c.id === caseId);
       if (current) {
         updateCaseInProfile(caseId, {

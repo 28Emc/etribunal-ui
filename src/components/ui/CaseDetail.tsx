@@ -35,17 +35,12 @@ interface CaseDetailProps {
   onOpenAuth?: () => void;
   isModal?: boolean;
   visibleComments: CaseComment[];
-  pendingComments: CaseComment[];
   pendingCount: number;
   hasMore: boolean;
   nextCursor: string | null;
   isFetching: boolean;
-  isPollingEnabled: boolean;
-  fetchInitialComments: (caseId: string) => Promise<void>;
-  fetchOlderComments: (caseId: string) => Promise<void>;
-  checkForNewComments: (caseId: string) => Promise<number>;
+  fetchOlderComments: (caseId: string) => void;
   showNewComments: () => void;
-  hideNewCommentsIndicator: () => void;
 }
 
 export const CaseDetail: React.FC<CaseDetailProps> = ({
@@ -72,17 +67,12 @@ export const CaseDetail: React.FC<CaseDetailProps> = ({
   onOpenAuth,
   isModal = true,
   visibleComments = [],
-  pendingComments = [],
   pendingCount = 0,
   hasMore = true,
   nextCursor = null,
   isFetching = false,
-  isPollingEnabled = true,
-  fetchInitialComments,
   fetchOlderComments,
-  checkForNewComments,
-  showNewComments,
-  hideNewCommentsIndicator
+  showNewComments
 }) => {
   const [fullscreenImage, setFullscreenImage] = useState<string | null>(null);
   const [commentText, setCommentText] = useState('');
@@ -764,38 +754,12 @@ export const CaseDetail: React.FC<CaseDetailProps> = ({
                 </div>
 
                 <div className="space-y-6">
-                  {(visibleComments.length + pendingComments.length) > 0 ? (
+                  {(visibleComments.length) > 0 ? (
                     <>
                       {/* Scroll target for new comments */}
                       <div ref={commentsTopRef} />
 
-                      {/* Render pending comments at the top (they're already in the right order) */}
-                      <CommentThread
-                        comments={pendingComments as CaseComment[]}
-                        currentUser={currentUser}
-                        highlightId={justRepliedTo}
-                        onReply={(id) => {
-                          if (!currentUser) {
-                            if (onOpenAuth) onOpenAuth();
-                            return;
-                          }
-                          setReplyingTo(id);
-                          setTimeout(() => commentInputRef.current?.focus(), 100);
-                        }}
-                        onLike={(id) => {
-                          if (!currentUser) {
-                            if (onOpenAuth) onOpenAuth();
-                            return;
-                          }
-                          onLikeComment(caseData.id, id);
-                        }}
-                        onDelete={onDeleteComment ? (commentId) => handleDeleteClick(commentId) : undefined}
-                        onReaction={(cId, emoji) => handleReactionClick(emoji, 'COMMENT', cId)}
-                        onUserClick={onUserClick}
-                        isReacting={isReacting}
-                        isDeleting={isDeleting}
-                      />
-                      {/* Render visible comments */}
+                      {/* Render visible comments (newest-first) */}
                       <CommentThread
                         comments={visibleComments}
                         currentUser={currentUser}

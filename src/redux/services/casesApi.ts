@@ -25,12 +25,12 @@
 
 import { createApi } from '@reduxjs/toolkit/query/react';
 import type { ThunkAction } from '@reduxjs/toolkit';
-import type { AxiosError, AxiosRequestConfig } from 'axios';
 import type { UnknownAction } from 'redux';
 import type { AppDispatch, RootState } from '../store';
-import { apiClient, authStorage } from '@api/client';
+import { authStorage } from '@api/client';
 import type { Case, FeedTab } from '@typings/index';
 import { mapDbCaseToCase } from '@services/mappers/caseMapper';
+import { baseQuery } from './rtkApiClient';
 
 // ============================================================
 // Constantes
@@ -72,49 +72,6 @@ export interface SavePayload {
 }
 
 type CaseReaction = 'LIKE' | 'LOVE' | 'ANGRY';
-
-// ============================================================
-// Base Query (sobre el cliente axios con interceptor de refresh)
-// ============================================================
-// apiClient ya unwrappe a `response.data?.data ?? response.data`,
-// así que aquí solo envolvemos la llamada y capturamos el error
-// con el shape { status, data } que espera RTK Query.
-
-type RtkError = { status: number; data: string | undefined };
-
-interface ApiCallArgs {
-  url: string;
-  method?: AxiosRequestConfig['method'];
-  body?: unknown;
-  params?: Record<string, string | number | boolean>;
-}
-
-async function rawRequest(config: AxiosRequestConfig): Promise<unknown> {
-  const instance = apiClient as unknown as {
-    request<T = unknown>(cfg: AxiosRequestConfig): Promise<T>;
-  };
-  return instance.request(config);
-}
-
-async function baseQuery(args: ApiCallArgs): Promise<{ data: unknown } | { error: RtkError }> {
-  try {
-    const data = await rawRequest({
-      url: args.url,
-      method: args.method ?? 'GET',
-      data: args.body,
-      params: args.params,
-    });
-    return { data };
-  } catch (error) {
-    const axiosError = error as AxiosError<{ message?: string }>;
-    return {
-      error: {
-        status: axiosError.response?.status ?? 0,
-        data: axiosError.response?.data?.message ?? axiosError.message,
-      },
-    };
-  }
-}
 
 // ============================================================
 // API

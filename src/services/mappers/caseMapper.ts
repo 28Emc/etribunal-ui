@@ -30,12 +30,16 @@ import { getDisplayName, getAnonymousAvatar } from '@services/anonymity';
 // ============================================================
 
 /**
- * Transforma un comentario crudo del backend (formato DB)
- * al formato CaseComment del frontend.
+ * Transforma un comentario crudo del backend (formato DB y/o
+ * CommentResponse del microservicio eTribunal) al formato
+ * CaseComment del frontend.
  *
- * Maneja dos formatos de reacciones:
- *   - Legacy:  reactions: [{ emoji: 'LIKE', user_id: 'x' }]
- *   - Nuevo:   reactions_summary: { counts: { LIKE: 5 } }, user_reaction: 'LIKE'
+ * Maneja DOS contratos:
+ *   - Legacy (monolito NestJS): user.avatar_url, created_at,
+ *     reactions: [{ emoji, user_id }], reactions_summary, user_reaction
+ *   - eTribunal (CommentResponse): user.avatarUrl, createdAt, parentId,
+ *     replies_count, reactions_count (conteo total), sin per-emoji ni
+ *     user_reaction (vienen por endpoint de reacciones)
  *
  * @param dbComment - Objeto crudo del backend
  * @param currentUserId - ID del usuario actual (para marcar isOwner)
@@ -80,27 +84,33 @@ export const mapDbCommentToComment = (
   const currentUserReaction = dbComment.user_reaction || userReaction;
 
   // ============================================================
-  // Paso 3: Determinar identidad del comentarista (anonimato)
+  // Paso 3: Determinar identidad del comentarista (anonimato).
+  // eTribunal usa user.anonymous + user.avatarUrl (camelCase).
   // ============================================================
   const commentUserId = dbComment.user?.id;
   const commentUserAnonymous =
-    dbComment.user?.is_anonymous || dbComment.is_anonymous;
+    dbComment.user?.anonymous ??
+    dbComment.user?.is_anonymous ??
+    dbComment.is_anonymous;
+
+  // Nombre visible: eTribunal ya enmascara con MASKED_USERNAME; el
+  // nombre hash determinista solo aplica para comentaristas anónimos.
+  const rawUsername =
+    dbComment.user?.username || dbComment.username;
 
   return {
     id: dbComment.id,
-    user: getDisplayName(
-      dbComment.user?.username || dbComment.username,
-      commentUserAnonymous,
-      commentUserId
-    ),
+    user: getDisplayName(rawUsername, commentUserAnonymous, commentUserId),
     userId: commentUserId,
     avatar: commentUserAnonymous
       ? getAnonymousAvatar(commentUserId)
-      : dbComment.user?.avatar_url ||
+      : dbComment.user?.avatarUrl || // eTribunal (camelCase)
+        dbComment.user?.avatar_url || // Legacy
         dbComment.avatar_url ||
         'https://picsum.photos/seed/user123/100/100',
     text: dbComment.content || dbComment.text || '',
-    timestamp: dbComment.created_at || dbComment.timestamp,
+    timestamp: dbComment.created_at || dbComment.createdAt || '',
+    createdAt: normalizeCommentTimestamp(dbComment.created_at ?? dbComment.createdAt),
 
     // reactions_summary ya está en el formato que necesita el frontend
     reactions: reactionsSummary,
@@ -113,6 +123,17 @@ export const mapDbCommentToComment = (
 
     contentLanguage: dbComment.content_language || undefined,
 
+    replies_count:
+      dbComment.replies_count ??
+      dbComment.replies?.length ??
+      dbComment.repliesCount ??
+      0,
+    reactions_count:
+      dbComment.reactions_count ??
+      dbComment.reactions?.length ??
+      dbComment.reactionsCount ??
+      0,
+
     // Mapear replies recursivamente (1 nivel de profundidad)
     replies: dbComment.replies
       ? dbComment.replies.map((r: any) =>
@@ -121,6 +142,23 @@ export const mapDbCommentToComment = (
       : [],
   };
 };
+
+/**
+ * Normaliza un timestamp de comentario a ISO 8601. Necesario para el
+ * polling de comentarios nuevos (cursor `since` del backend).
+ */
+function normalizeCommentTimestamp(value: unknown): string {
+  if (value instanceof Date && !isNaN(value.getTime())) {
+    return value.toISOString();
+  }
+  if (typeof value === 'string') {
+    const parsed = new Date(value);
+    if (!isNaN(parsed.getTime())) {
+      return parsed.toISOString();
+    }
+  }
+  return new Date().toISOString();
+}
 
 // ============================================================
 // mapDbCaseToCase

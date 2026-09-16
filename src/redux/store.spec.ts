@@ -7,6 +7,7 @@ describe('redux store', () => {
 
     expect(state).toHaveProperty('auth');
     expect(state).toHaveProperty('casesApi');
+    expect(state).toHaveProperty('commentsApi');
     expect(state).toHaveProperty('ui');
   });
 
@@ -17,11 +18,14 @@ describe('redux store', () => {
     expect(auth).toHaveProperty('isLoading');
   });
 
-  it('casesApi debería estar registrado en el store', () => {
-    const { casesApi } = store.getState();
+  it('casesApi y commentsApi deberían estar registrados en el store', () => {
+    const { casesApi, commentsApi } = store.getState();
     expect(casesApi).toHaveProperty('queries');
     expect(casesApi).toHaveProperty('mutations');
     expect(casesApi).toHaveProperty('config');
+    expect(commentsApi).toHaveProperty('queries');
+    expect(commentsApi).toHaveProperty('mutations');
+    expect(commentsApi).toHaveProperty('config');
   });
 
   it('ui slice debería tener estado inicial', () => {
