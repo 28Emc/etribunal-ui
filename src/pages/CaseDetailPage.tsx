@@ -8,10 +8,9 @@ import { DeleteCaseModal } from '@components/ui/DeleteCaseModal';
 import { EditImagesModal } from '@components/ui/EditImagesModal';
 import { EditCaseModal, type EditCasePayload } from '@components/ui/EditCaseModal';
 import { useAuth } from '@context/AuthContext';
-import { useVoteCaseMutation, useReactToCaseMutation } from '@redux/services/casesApi';
+import { useVoteCaseMutation, useReactToCaseMutation, useSaveCaseMutation } from '@redux/services/casesApi';
 import { useReactToCommentMutation } from '@redux/services/commentsApi';
 import { useCommentsData } from '@hooks/useCommentsData';
-import { useSavedCases } from '@hooks/useSavedCases';
 import { apiClient } from '@api/client';
 import { mapDbCaseToCase } from '@shared/utils/caseMapper';
 import type { Case } from '@typings/index';
@@ -57,6 +56,7 @@ export function CaseDetailPage() {
   const [voteCase] = useVoteCaseMutation();
   const [reactToCase] = useReactToCaseMutation();
   const [reactToComment] = useReactToCommentMutation();
+  const [saveCase] = useSaveCaseMutation();
   const commentsData = useCommentsData(caseData?.id);
   const {
     addComment,
@@ -64,7 +64,6 @@ export function CaseDetailPage() {
     showNewComments,
     fetchOlderComments,
   } = commentsData;
-  const { toggleSave } = useSavedCases();
 
   // Determine the correct API endpoint based on route params
   const isSlugRoute = !!params.slug;
@@ -136,9 +135,15 @@ export function CaseDetailPage() {
     if (isSaving) return;
     setIsSaving(true);
     try {
-      await toggleSave(caseId);
+      const data = await saveCase({ caseId }).unwrap();
+      setCaseData(prev => prev ? {
+        ...prev,
+        isSaved: data.saved,
+        anchorsCount: data.anchorsCount,
+      } : prev);
     } catch (err) {
       console.error(err);
+      addToast('error', t('toasts.errorProcessingAnchor'));
     } finally {
       setIsSaving(false);
     }

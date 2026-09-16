@@ -20,8 +20,7 @@ import type { ShareType } from '@hooks/useShare';
 import { useInfiniteScroll } from '@shared/hooks/useInfiniteScroll';
 import { SEO } from '@shared/components/SEO';
 import { CaseCard } from '@components/ui/CaseCard';
-import { useVoteCaseMutation, useReactToCaseMutation } from '@redux/services/casesApi';
-import { useSavedCases } from '@hooks/useSavedCases';
+import { useVoteCaseMutation, useReactToCaseMutation, useSaveCaseMutation } from '@redux/services/casesApi';
 import { useAddCommentMutation } from '@redux/services/commentsApi';
 
 export const ProfilePage: React.FC = () => {
@@ -31,7 +30,7 @@ export const ProfilePage: React.FC = () => {
   const { addToast } = useToast();
   const { currentUser, logout, setCurrentUser } = useAuth();
   const [voteCase] = useVoteCaseMutation();
-  const { toggleSave: toggleSaveCase } = useSavedCases();
+  const [saveCase] = useSaveCaseMutation();
   const [reactToCase] = useReactToCaseMutation();
   const [addComment] = useAddCommentMutation();
 
@@ -328,19 +327,17 @@ export const ProfilePage: React.FC = () => {
     if (!currentUser) { navigate('/login'); return; }
     setIsSaving(true);
     try {
-      const result = await toggleSaveCase(caseId);
-      if (result !== undefined) {
-        updateCaseInProfile(caseId, {
-          isSaved: result.saved,
-          anchorsCount: result.anchorsCount,
-        });
-      }
+      const data = await saveCase({ caseId }).unwrap();
+      updateCaseInProfile(caseId, {
+        isSaved: data.saved,
+        anchorsCount: data.anchorsCount,
+      });
     } catch (error) {
       console.error('Error toggling save:', error);
     } finally {
       setIsSaving(false);
     }
-  }, [currentUser, toggleSaveCase, updateCaseInProfile, navigate]);
+  }, [currentUser, saveCase, updateCaseInProfile, navigate]);
 
   const handleReaction = useCallback(async (caseId: string, emoji: 'LIKE' | 'LOVE' | 'ANGRY') => {
     if (!currentUser) { navigate('/login'); return; }
