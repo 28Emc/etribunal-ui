@@ -88,11 +88,78 @@ export const NotificationsMenu: React.FC<NotificationsMenuProps> = ({
     }
   };
 
+  let notificationBody: React.ReactNode;
+  if (isLoading) {
+    notificationBody = (
+      <div className="p-8 text-center">
+        <div className="w-8 h-8 border-2 border-primary/30 border-t-primary rounded-full animate-spin mx-auto" />
+      </div>
+    );
+  } else if (notifications.length > 0) {
+    notificationBody = (
+      <div className="divide-y divide-border-main/5">
+        {notifications.map((n) => {
+          const Icon = getNotificationIcon(n.type);
+          return (
+          <button
+            key={n.id}
+            onClick={() => {
+              onMarkAsRead(n.id);
+              onClose();
+
+              if (n.type === 'CASE_INVITATION' && n.payload?.invite_url) {
+                window.location.href = n.payload.invite_url;
+              } else if (n.payload?.case_id) {
+                onSelectCase(n.payload.case_id);
+              } else if (n.type === 'NEW_FOLLOWER' && n.actor_username) {
+                onSelectProfile(n.actor_username);
+              }
+            }}
+            className={cn(
+              "w-full p-4 flex items-start gap-4 dark:hover:bg-secondary/5 hover:bg-primary/5 transition-all text-left relative group",
+              !n.is_read && "dark:bg-secondary/[0.02] bg-primary/[0.02]"
+            )}
+          >
+            <div className={cn("w-10 h-10 rounded-full flex items-center justify-center shrink-0 overflow-hidden", getIconBgColor(n.type))}>
+              {n.actor_avatar ? (
+                <img src={n.actor_avatar} alt="" className="w-full h-full object-cover" />
+              ) : (
+                <Icon className="w-5 h-5" />
+              )}
+            </div>
+            <div className="flex-1 min-w-0 pr-2">
+              <p className="text-xs font-black text-text-main mb-0.5 leading-tight uppercase tracking-tight">
+                {getNotificationTitle(n.type)}
+              </p>
+              <p className="text-[11px] text-text-muted mb-1 line-clamp-2 leading-tight">
+                {getNotificationDescription(n)}
+              </p>
+              <p className="text-[9px] dark:text-secondary text-primary uppercase font-black tracking-widest mt-1">
+                {formatRelativeCaseDate(n.created_at)}
+              </p>
+            </div>
+            {!n.is_read && (
+              <div className="w-2 h-2 rounded-full dark:bg-secondary bg-primary mt-2 ring-2 dark:ring-secondary/30 ring-primary/30" />
+            )}
+          </button>
+          );
+        })}
+      </div>
+    );
+  } else {
+    notificationBody = (
+      <div className="p-12 text-center text-text-muted">
+        <BellOff className="w-8 h-8 mx-auto mb-3 opacity-20" />
+        <p className="text-xs font-bold uppercase tracking-widest">{t('notifications.noNotifications')}</p>
+      </div>
+    );
+  }
+
   return (
     <AnimatePresence>
       {isOpen && (
         <>
-          <div className="fixed inset-0 z-40" onClick={onClose} />
+          <button type="button" tabIndex={-1} aria-label="Cerrar notificaciones" className="fixed inset-0 z-40 cursor-default" onMouseDown={onClose} />
           <motion.div
             initial={{ opacity: 0, y: -10 }}
             animate={{ opacity: 1, y: 0 }}
@@ -110,65 +177,7 @@ export const NotificationsMenu: React.FC<NotificationsMenuProps> = ({
             </div>
 
             <div className="max-h-96 overflow-y-auto no-scrollbar">
-              {isLoading ? (
-                <div className="p-8 text-center">
-                  <div className="w-8 h-8 border-2 border-primary/30 border-t-primary rounded-full animate-spin mx-auto" />
-                </div>
-              ) : notifications.length > 0 ? (
-                <div className="divide-y divide-border-main/5">
-                  {notifications.map((n) => {
-                    const Icon = getNotificationIcon(n.type);
-                    return (
-                    <button
-                      key={n.id}
-                      onClick={() => {
-                        onMarkAsRead(n.id);
-                        onClose();
-                        
-                        if (n.type === 'CASE_INVITATION' && n.payload?.invite_url) {
-                          window.location.href = n.payload.invite_url;
-                        } else if (n.payload?.case_id) {
-                          onSelectCase(n.payload.case_id);
-                        } else if (n.type === 'NEW_FOLLOWER' && n.actor_username) {
-                          onSelectProfile(n.actor_username);
-                        }
-                      }}
-                      className={cn(
-                        "w-full p-4 flex items-start gap-4 dark:hover:bg-secondary/5 hover:bg-primary/5 transition-all text-left relative group",
-                        !n.is_read && "dark:bg-secondary/[0.02] bg-primary/[0.02]"
-                      )}
-                    >
-                      <div className={cn("w-10 h-10 rounded-full flex items-center justify-center shrink-0 overflow-hidden", getIconBgColor(n.type))}>
-                        {n.actor_avatar ? (
-                          <img src={n.actor_avatar} alt="" className="w-full h-full object-cover" />
-                        ) : (
-                          <Icon className="w-5 h-5" />
-                        )}
-                      </div>
-                      <div className="flex-1 min-w-0 pr-2">
-                        <p className="text-xs font-black text-text-main mb-0.5 leading-tight uppercase tracking-tight">
-                          {getNotificationTitle(n.type)}
-                        </p>
-                        <p className="text-[11px] text-text-muted mb-1 line-clamp-2 leading-tight">
-                          {getNotificationDescription(n)}
-                        </p>
-                        <p className="text-[9px] dark:text-secondary text-primary uppercase font-black tracking-widest mt-1">
-                          {formatRelativeCaseDate(n.created_at)}
-                        </p>
-                      </div>
-                      {!n.is_read && (
-                        <div className="w-2 h-2 rounded-full dark:bg-secondary bg-primary mt-2 ring-2 dark:ring-secondary/30 ring-primary/30" />
-                      )}
-                    </button>
-                    );
-                  })}
-                </div>
-              ) : (
-                <div className="p-12 text-center text-text-muted">
-                  <BellOff className="w-8 h-8 mx-auto mb-3 opacity-20" />
-                  <p className="text-xs font-bold uppercase tracking-widest">{t('notifications.noNotifications')}</p>
-                </div>
-              )}
+              {notificationBody}
             </div>
           </motion.div>
         </>

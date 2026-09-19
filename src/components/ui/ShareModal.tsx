@@ -1,7 +1,7 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
 import { useTranslation } from 'react-i18next';
-import { X, Copy, Check, MessageCircle, Share2, ExternalLink, Mail, Send } from 'lucide-react';
+import { X, Copy, Check, MessageCircle, Share2, Mail, Send } from 'lucide-react';
 import { cn } from '@utils/helpers';
 import { Tooltip } from '@components/ui/Tooltip';
 import { useShare, generateShareUrl, getWhatsAppLink, getTwitterLink, getTelegramLink, getEmailLink } from '@shared/hooks/useShare';

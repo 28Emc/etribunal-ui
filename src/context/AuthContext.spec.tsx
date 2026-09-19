@@ -161,5 +161,6 @@ describe('AuthProvider', () => {
     screen.getByTestId('btn-setuser').click();
     await screen.getByTestId('btn-update').click();
     await screen.getByTestId('btn-changepw').click();
+    expect(screen.getByTestId('user')).toBeInTheDocument();
   });
 });

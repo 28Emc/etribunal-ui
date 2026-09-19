@@ -9,9 +9,81 @@ import { useAuth } from '@context/AuthContext';
 import { useTranslation } from 'react-i18next';
 import { SectionTitle } from '@components/ui/SectionTitle';
 import { PageLayout } from '@layout/PageLayout';
-import { SEO } from '@shared/components/SEO';
+import { Seo } from '@shared/components/SEO';
 import { DeleteAccountModal } from '@components/ui/DeleteAccountModal';
 import { apiClient } from '@api/client';
+
+interface SettingRowProps {
+  icon: React.ComponentType<{ className?: string }>;
+  label: string;
+  value?: string;
+  onClick?: () => void;
+  isToggle?: boolean;
+  toggleValue?: boolean;
+  onToggle?: () => void;
+  isDanger?: boolean;
+}
+
+const SettingRow: React.FC<SettingRowProps> = ({
+  icon: Icon,
+  label,
+  value,
+  onClick,
+  isToggle,
+  toggleValue,
+  onToggle,
+  isDanger,
+}) => (
+  <button
+    onClick={onClick}
+    className={cn(
+      "w-full flex items-center justify-between p-5 bg-card border border-border-main/5 rounded-[28px] transition-all hover:scale-[1.02] active:scale-[0.98] group min-h-[60px]",
+      isDanger ? "hover:bg-secondary/5 active:bg-secondary/10 hover:border-secondary/30 active:border-secondary/50" : "hover:bg-primary/5 active:bg-primary/10 hover:border-primary/30 active:border-primary/50"
+    )}
+  >
+    <div className="flex items-center gap-4">
+      <div className={cn(
+        "w-12 h-12 rounded-2xl flex items-center justify-center transition-all",
+        isDanger
+          ? "bg-secondary/10 text-secondary group-hover:bg-secondary group-hover:text-white group-active:bg-secondary group-active:text-white"
+          : "bg-primary/10 text-primary group-hover:bg-primary group-hover:text-white group-active:bg-primary group-active:text-white"
+      )}>
+        <Icon className="w-5 h-5 transition-transform group-hover:scale-110 group-active:scale-110" />
+      </div>
+      <span className={cn(
+        "text-sm font-black uppercase tracking-widest transition-colors",
+        isDanger ? "text-secondary" : "text-text-main group-hover:text-primary group-active:text-primary"
+      )}>
+        {label}
+      </span>
+    </div>
+
+    <div className="flex items-center gap-3">
+      {value && <span className="text-[10px] font-black text-text-muted uppercase tracking-widest">{value}</span>}
+      {isToggle ? (
+        <div
+          role="switch"
+          aria-checked={toggleValue}
+          tabIndex={0}
+onClick={(e) => { e.stopPropagation(); onToggle?.(); }}
+            onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); onToggle?.(); } }}
+          className={cn(
+            "w-12 h-6 rounded-full p-1 transition-all duration-300 cursor-pointer min-w-[48px] min-h-[24px]",
+            toggleValue ? "bg-primary shadow-[0_0_10px_rgba(51,102,153,0.4)]" : "bg-border-main/20"
+          )}
+        >
+          <motion.div
+            animate={{ x: toggleValue ? 24 : 0 }}
+            transition={{ type: "spring", stiffness: 500, damping: 30 }}
+            className="w-4 h-4 bg-white rounded-full shadow-lg"
+          />
+        </div>
+      ) : (
+        <div className={cn("w-5 h-5 transition-transform group-hover:translate-x-1 group-active:translate-x-1 flex items-center justify-center", isDanger ? "text-secondary/50" : "text-text-muted")}>&gt;</div>
+      )}
+    </div>
+  </button>
+);
 
 export const SettingsPage: React.FC = () => {
   const { currentUser: user, updateProfile, changePassword, logout } = useAuth();
@@ -58,7 +130,7 @@ export const SettingsPage: React.FC = () => {
     const newTheme = theme === 'dark' ? 'light' : 'dark';
     setTheme(newTheme);
     localStorage.setItem('etribunal_theme', newTheme);
-    document.documentElement.setAttribute('data-theme', newTheme);
+    document.documentElement.dataset.theme = newTheme;
   };
 
   const handleLanguageChange = async (newLang: string) => {
@@ -172,57 +244,9 @@ export const SettingsPage: React.FC = () => {
     navigate('/');
   };
 
-  const SettingRow = ({ icon: Icon, label, value, onClick, isToggle, toggleValue, onToggle, isDanger }: any) => (
-    <button
-      onClick={onClick}
-      className={cn(
-        "w-full flex items-center justify-between p-5 bg-card border border-border-main/5 rounded-[28px] transition-all hover:scale-[1.02] active:scale-[0.98] group min-h-[60px]",
-        isDanger ? "hover:bg-secondary/5 active:bg-secondary/10 hover:border-secondary/30 active:border-secondary/50" : "hover:bg-primary/5 active:bg-primary/10 hover:border-primary/30 active:border-primary/50"
-      )}
-    >
-      <div className="flex items-center gap-4">
-        <div className={cn(
-          "w-12 h-12 rounded-2xl flex items-center justify-center transition-all",
-          isDanger
-            ? "bg-secondary/10 text-secondary group-hover:bg-secondary group-hover:text-white group-active:bg-secondary group-active:text-white"
-            : "bg-primary/10 text-primary group-hover:bg-primary group-hover:text-white group-active:bg-primary group-active:text-white"
-        )}>
-          <Icon className="w-5 h-5 transition-transform group-hover:scale-110 group-active:scale-110" />
-        </div>
-        <span className={cn(
-          "text-sm font-black uppercase tracking-widest transition-colors",
-          isDanger ? "text-secondary" : "text-text-main group-hover:text-primary group-active:text-primary"
-        )}>
-          {label}
-        </span>
-      </div>
-
-      <div className="flex items-center gap-3">
-        {value && <span className="text-[10px] font-black text-text-muted uppercase tracking-widest">{value}</span>}
-        {isToggle ? (
-          <div
-            onClick={(e) => { e.stopPropagation(); onToggle(); }}
-            className={cn(
-              "w-12 h-6 rounded-full p-1 transition-all duration-300 cursor-pointer min-w-[48px] min-h-[24px]",
-              toggleValue ? "bg-primary shadow-[0_0_10px_rgba(51,102,153,0.4)]" : "bg-border-main/20"
-            )}
-          >
-            <motion.div
-              animate={{ x: toggleValue ? 24 : 0 }}
-              transition={{ type: "spring", stiffness: 500, damping: 30 }}
-              className="w-4 h-4 bg-white rounded-full shadow-lg"
-            />
-          </div>
-        ) : (
-          <div className={cn("w-5 h-5 transition-transform group-hover:translate-x-1 group-active:translate-x-1 flex items-center justify-center", isDanger ? "text-secondary/50" : "text-text-muted")}>&gt;</div>
-        )}
-      </div>
-    </button>
-  );
-
   return (
     <PageLayout title={t('settings.settings')}>
-      <SEO title={t('profile.settings')} />
+      <Seo title={t('profile.settings')} />
       <div className="flex-1 py-3 sm:py-6 space-y-10 pb-32">
         <section>
           <SectionTitle>{t('settings.account')}</SectionTitle>
@@ -310,7 +334,7 @@ export const SettingsPage: React.FC = () => {
                 </button>
               </div>
             ) : (
-              <SettingRow icon={FileText} label={t('settings.editBio')} value={user.bio ? (user.bio.length > 20 ? user.bio.substring(0, 20) + '...' : user.bio) : t('settings.addBio')} onClick={() => setIsEditingBio(true)} />
+              <SettingRow icon={FileText} label={t('settings.editBio')} value={(user.bio && (user.bio.length > 20 ? user.bio.substring(0, 20) + '...' : user.bio)) || t('settings.addBio')} onClick={() => setIsEditingBio(true)} />
             )}
 
             {user.hasPassword && (

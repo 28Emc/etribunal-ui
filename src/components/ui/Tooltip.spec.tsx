@@ -124,7 +124,7 @@ describe('Tooltip', () => {
     expect(tooltipEl).toBeInTheDocument();
   });
 
-  it('debería alternar en touch device al hacer click', () => {
+  it('debería alternar en touch device al hacer tap', () => {
     const origTouchStart = 'ontouchstart' in window;
     Object.defineProperty(window, 'ontouchstart', { value: {}, writable: true, configurable: true });
 
@@ -135,11 +135,11 @@ describe('Tooltip', () => {
     );
 
     const trigger = screen.getByTestId('trigger');
-    fireEvent.click(trigger);
+    fireEvent.pointerUp(trigger, { pointerType: 'touch' });
     act(() => { vi.advanceTimersByTime(200); });
     expect(screen.getByText('Touch tip')).toBeInTheDocument();
 
-    fireEvent.click(trigger);
+    fireEvent.pointerUp(trigger, { pointerType: 'touch' });
     expect(screen.queryByText('Touch tip')).not.toBeInTheDocument();
 
     delete (window as any).ontouchstart;
@@ -154,6 +154,7 @@ describe('Tooltip', () => {
     const trigger = screen.getByTestId('trigger');
     fireEvent.mouseEnter(trigger);
     unmount();
+    expect(trigger).not.toBeInTheDocument();
   });
 
 });

@@ -85,13 +85,17 @@ export const Tooltip: React.FC<TooltipProps> = ({
     setStyle(null);
   }, []);
 
-  const toggleTooltip = useCallback(() => {
-    if (isVisible) {
-      hideTooltip();
-    } else {
-      setIsVisible(true);
-    }
-  }, [isVisible, hideTooltip]);
+  const handlePointerUpToggle = useCallback(
+    (e: React.PointerEvent) => {
+      if (e.pointerType === 'mouse') return;
+      if (isVisible) {
+        hideTooltip();
+      } else {
+        showTooltip();
+      }
+    },
+    [isVisible, showTooltip, hideTooltip]
+  );
 
   useEffect(() => {
     if (!isTouchDevice || !isVisible) return;
@@ -164,9 +168,9 @@ export const Tooltip: React.FC<TooltipProps> = ({
         style={{ contain: 'layout' }}
         onMouseEnter={!isTouchDevice ? showTooltip : undefined}
         onMouseLeave={!isTouchDevice ? hideTooltip : undefined}
-        onClick={isTouchDevice ? toggleTooltip : undefined}
-        onTouchStart={!isTouchDevice ? showTooltip : undefined}
-        onTouchEnd={!isTouchDevice ? hideTooltip : undefined}
+        onTouchStart={showTooltip}
+        onTouchEnd={hideTooltip}
+        onPointerUp={handlePointerUpToggle}
         onFocus={showTooltip}
         onBlur={hideTooltip}
       >

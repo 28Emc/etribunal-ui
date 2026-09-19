@@ -1,5 +1,4 @@
 import React, { useState } from 'react';
-import { motion } from 'motion/react';
 import { cn } from '@utils/helpers';
 import { Maximize2 } from 'lucide-react';
 import type { Case } from '@typings/index';
@@ -16,7 +15,7 @@ export function EvidenceGallery({
   accentClass,
   captionAlignClass = '',
   onOpen,
-}: EvidenceGalleryProps) {
+}: Readonly<EvidenceGalleryProps>) {
   const [activeIndex, setActiveIndex] = useState(0);
 
   if (!evidence.length) return null;
@@ -25,15 +24,16 @@ export function EvidenceGallery({
 
   return (
     <div className="space-y-4">
-      <div
+      <button
+        type="button"
         onClick={() => onOpen(activeEvidence.url)}
-        className="aspect-[4/3] rounded-[32px] overflow-hidden border border-border-main/10 shadow-2xl relative group cursor-zoom-in bg-card"
+        className="block w-full text-left aspect-[4/3] rounded-[32px] overflow-hidden border border-border-main/10 shadow-2xl relative group cursor-zoom-in bg-card"
       >
         <img src={activeEvidence.url} alt={activeEvidence.caption || ''} className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-[1.03]" referrerPolicy="no-referrer" />
         <div className="absolute inset-0 bg-gradient-to-t from-black/55 via-transparent to-transparent opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center">
           <Maximize2 className="w-8 h-8 text-white/85" />
         </div>
-      </div>
+      </button>
 
       {activeEvidence.caption && activeEvidence.caption !== 'Evidence' && (
         <p className={cn("text-xs text-text-muted font-bold italic px-2 uppercase tracking-wider", captionAlignClass)}>

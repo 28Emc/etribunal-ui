@@ -1,12 +1,10 @@
-import React, { useState, useRef } from 'react';
+﻿import React, { useState, useRef } from 'react';
 import { motion } from 'motion/react';
 import { useTranslation } from 'react-i18next';
-import { useNavigate } from 'react-router-dom';
 import { X, Image as ImageIcon, Send, AlertCircle, Quote, ChevronRight, Loader2 } from 'lucide-react';
 import { cn } from '@utils/helpers';
 import type { Case } from '@typings/index';
-import { apiClient, authStorage } from '@api/client';
-import { Tooltip } from '@components/ui/Tooltip';
+import { apiClient } from '@api/client';
 
 interface ImageFile {
   url: string;
@@ -19,8 +17,7 @@ interface JoinCaseProps {
 }
 
 export const JoinCase: React.FC<JoinCaseProps> = ({ caseData, onSubmit }) => {
-  const { t } = useTranslation();
-  const navigate = useNavigate();
+const { t } = useTranslation();
   const [story, setStory] = useState('');
   const [images, setImages] = useState<ImageFile[]>([]);
   const [isAnonymous, setIsAnonymous] = useState(false);
@@ -63,11 +60,7 @@ const uploadImagesToCloudinary = async (imageFiles: ImageFile[]): Promise<string
   return uploadedUrls;
 };
 
-  const handleClose = () => {
-    navigate('/', { replace: true });
-  };
-
-  const handleSubmitFn = async (e: React.FormEvent) => {
+  const handleSubmitFn = async (e: React.SyntheticEvent<HTMLFormElement>) => {
     e.preventDefault();
     if (story.length < 25 || story.length > 2000) return;
 
@@ -84,6 +77,23 @@ const uploadImagesToCloudinary = async (imageFiles: ImageFile[]): Promise<string
       setIsSubmitting(false);
     }
   };
+
+  let submitButtonContent: React.ReactNode = (
+    <>
+      <Send className="w-5 h-5" />
+      {t('joinCase.submitYourSide')}
+    </>
+  );
+  if (isSubmitting) {
+    submitButtonContent = isUploading ? (
+      <>
+        <Loader2 className="w-5 h-5 animate-spin" />
+        {t('joinCase.uploadingEvidence')}
+      </>
+    ) : (
+      <div className="w-6 h-6 border-2 border-white/30 border-t-white rounded-full animate-spin" />
+    );
+  }
 
   return (
     <motion.div
@@ -193,7 +203,7 @@ const uploadImagesToCloudinary = async (imageFiles: ImageFile[]): Promise<string
                   <motion.div
                     initial={{ opacity: 0, scale: 0.8 }}
                     animate={{ opacity: 1, scale: 1 }}
-                    key={idx}
+                    key={img.url}
                     className="aspect-4/3 rounded-2xl overflow-hidden border border-border-main/10 relative group"
                   >
                     <img src={img.url} alt="" className="w-full h-full object-cover" referrerPolicy="no-referrer" />
@@ -247,7 +257,7 @@ const uploadImagesToCloudinary = async (imageFiles: ImageFile[]): Promise<string
                   )} />
                 </button>
                 <span className="text-sm font-medium text-text-muted">
-                  {t('joinCase.anonymousResponse') || 'Responder de forma anónima'}
+                  {t('joinCase.anonymousResponse') || 'Responder de forma anÃ³nima'}
                 </span>
               </div>
             )}
@@ -264,21 +274,7 @@ const uploadImagesToCloudinary = async (imageFiles: ImageFile[]): Promise<string
                     : "bg-secondary text-white shadow-[0_10px_20px_rgba(255,102,0,0.3)] hover:brightness-110"
                 )}
               >
-                {isSubmitting ? (
-                  isUploading ? (
-                    <>
-                      <Loader2 className="w-5 h-5 animate-spin" />
-                      {t('joinCase.uploadingEvidence')}
-                    </>
-                  ) : (
-                    <div className="w-6 h-6 border-2 border-white/30 border-t-white rounded-full animate-spin" />
-                  )
-                ) : (
-                  <>
-                    <Send className="w-5 h-5" />
-                    {t('joinCase.submitYourSide')}
-                  </>
-                )}
+                {submitButtonContent}
               </button>
             </div>
           </motion.form>
@@ -287,3 +283,4 @@ const uploadImagesToCloudinary = async (imageFiles: ImageFile[]): Promise<string
     </motion.div>
   );
 };
+

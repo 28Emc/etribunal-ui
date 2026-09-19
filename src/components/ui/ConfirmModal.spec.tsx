@@ -71,6 +71,6 @@ describe('ConfirmModal', () => {
         isLoading={true}
       />
     );
-    expect(screen.getAllByRole('button').length).toBe(2);
+    expect(screen.getAllByRole('button')).toHaveLength(2);
   });
 });

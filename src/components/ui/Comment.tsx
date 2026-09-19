@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
+import type { TFunction } from 'i18next';
 import { cn } from '@utils/helpers';
 import { useTranslation } from 'react-i18next';
 import { RelativeTime } from '@shared/components/RelativeTime';
@@ -8,22 +9,24 @@ import { Reply, Trash2, Loader2, Languages } from 'lucide-react';
 import { useContentTranslation } from '@features/translation/hooks/useContentTranslation';
 import { ENABLE_TRANSLATIONS } from '@services/featureFlags';
 
+interface CommentItem {
+  id: string;
+  user: string;
+  userId?: string;
+  avatar: string;
+  text: string;
+  timestamp: string;
+  likes?: number;
+  isOwner?: boolean;
+  reactions?: { LIKE: number; LOVE: number; ANGRY: number };
+  userReaction?: string | null;
+  replies?: any[];
+  replies_count?: number;
+  contentLanguage?: string;
+}
+
 interface CommentProps {
-  comment: {
-    id: string;
-    user: string;
-    userId?: string;
-    avatar: string;
-    text: string;
-    timestamp: string;
-    likes?: number;
-    isOwner?: boolean;
-    reactions?: { LIKE: number; LOVE: number; ANGRY: number };
-    userReaction?: string | null;
-    replies?: any[];
-    replies_count?: number;
-    contentLanguage?: string;
-  };
+  comment: CommentItem;
   isTop?: boolean;
   highlightId?: string | null;
   onReply: (commentId: string) => void;
@@ -35,6 +38,141 @@ interface CommentProps {
   isReacting?: boolean;
   isDeleting?: boolean;
   depth?: number;
+}
+
+function getAvatarSize(depth: number): string {
+  if (depth === 0) return 'w-10 h-10';
+  if (depth === 1) return 'w-9 h-9';
+  return 'w-8 h-8';
+}
+
+function getIndents(depth: number): { soft: number; gap: number } {
+  if (depth === 0) return { soft: 20, gap: 40 };
+  if (depth === 1) return { soft: 18, gap: 36 };
+  return { soft: 16, gap: 32 };
+}
+
+function commentHasReplies(comment: CommentItem): boolean {
+  return (comment.replies?.length ?? 0) > 0 || (comment.replies_count ?? 0) > 0;
+}
+
+function CommentAvatar({ comment, size, onUserClick }: Readonly<{ comment: CommentItem; size: string; onUserClick?: (username: string) => void }>) {
+  const base = cn(size, "rounded-full border-2 border-border-main/10 object-cover");
+  return (
+    <button type="button" onClick={() => onUserClick?.(comment.user)} className="block text-left">
+      <div className="relative">
+        {comment.avatar ? (
+          <img src={comment.avatar} alt="" className={base} referrerPolicy="no-referrer" />
+        ) : (
+          <div className={cn(size, "rounded-full bg-primary/20 border-2 border-primary/10 flex items-center justify-center text-sm font-bold text-primary")}>
+            {comment.user?.charAt(0).toUpperCase() || '?'}
+          </div>
+        )}
+      </div>
+    </button>
+  );
+}
+
+interface CommentActionsProps {
+  t: TFunction;
+  comment: CommentItem;
+  currentLocale: string;
+  canReply: boolean;
+  canShowReplies: boolean;
+  hasReplies: boolean;
+  showReplies: boolean;
+  isDeleting: boolean;
+  isCommentTranslating: boolean;
+  showCommentTranslation: boolean;
+  translatedComment: { commentId?: string; content?: string; sourceLanguage?: string } | null;
+  onTranslate: () => void;
+  onShowOriginal: () => void;
+  onReplyClick: () => void;
+  onDeleteClick?: () => void;
+  onToggleReplies: () => void;
+}
+
+function CommentActions({
+  t,
+  comment,
+  currentLocale,
+  canReply,
+  canShowReplies,
+  hasReplies,
+  showReplies,
+  isDeleting,
+  isCommentTranslating,
+  showCommentTranslation,
+  translatedComment,
+  onTranslate,
+  onShowOriginal,
+  onReplyClick,
+  onDeleteClick,
+  onToggleReplies,
+}: Readonly<CommentActionsProps>) {
+  const canTranslate = comment.contentLanguage && comment.contentLanguage !== currentLocale;
+  const translatedMatches = translatedComment?.commentId === comment.id;
+
+  return (
+    <div className="flex items-center gap-4 pt-1">
+      {ENABLE_TRANSLATIONS && canTranslate && (
+        <>
+          {!showCommentTranslation || !translatedMatches ? (
+            <button
+              onClick={onTranslate}
+              disabled={isCommentTranslating}
+              className="text-[9px] font-black text-text-muted hover:text-primary hover:bg-primary/5 px-2 py-1 rounded-lg transition-all uppercase tracking-widest flex items-center gap-1 disabled:opacity-50"
+            >
+              {isCommentTranslating ? (
+                <Loader2 className="w-3 h-3 animate-spin" />
+              ) : (
+                <Languages className="w-3 h-3" />
+              )}
+              {t('cases.translate')}
+            </button>
+          ) : (
+            <button
+              onClick={onShowOriginal}
+              className="text-[9px] font-black text-primary hover:text-primary/80 px-2 py-1 rounded-lg transition-all uppercase tracking-widest flex items-center gap-1"
+            >
+              {t('cases.seeOriginal')}
+              <span className="text-[7px] font-medium text-text-muted normal-case tracking-normal">
+                ({translatedComment?.sourceLanguage?.toUpperCase()})
+              </span>
+            </button>
+          )}
+        </>
+      )}
+      {canReply && (
+        <button
+          onClick={onReplyClick}
+          className="cursor-pointer text-[9px] font-black text-text-muted hover:text-secondary hover:bg-secondary/5 px-2 py-1 rounded-lg transition-all uppercase tracking-widest flex items-center gap-1"
+        >
+          <Reply className="w-3 h-3" />
+          {t('comments.reply')}
+        </button>
+      )}
+      {comment.isOwner && onDeleteClick && (
+        <button
+          onClick={onDeleteClick}
+          disabled={isDeleting}
+          className="text-[9px] font-black text-secondary hover:text-red-500 transition-colors uppercase tracking-widest flex items-center gap-1 disabled:opacity-50"
+        >
+          {isDeleting ? <Loader2 className="w-3 h-3 animate-spin" /> : <Trash2 className="w-3 h-3" />}
+          {t('comments.delete')}
+        </button>
+      )}
+      {hasReplies && canShowReplies && (
+        <button
+          onClick={onToggleReplies}
+          className="text-[10px] font-black text-primary/80 hover:text-primary transition-colors flex items-center gap-1"
+        >
+          <span className="text-[8px]">↳</span>
+          {showReplies ? t('comments.hideReplies') : `${t('comments.showReplies')} (${comment.replies?.length || comment.replies_count})`}
+        </button>
+      )}
+    </div>
+  );
 }
 
 export function Comment({
@@ -50,12 +188,11 @@ export function Comment({
   isReacting = false,
   isDeleting = false,
   depth = 0,
-}: CommentProps) {
+}: Readonly<CommentProps>) {
   const { t, i18n } = useTranslation();
   const {
     translateComment: translateCommentContent,
     showOriginal,
-    showTranslated: showCommentTranslated,
     isTranslating: isCommentTranslating,
     translatedComment,
     showTranslation: showCommentTranslation,
@@ -65,11 +202,10 @@ export function Comment({
   const [collapsed, setCollapsed] = useState(false);
 
   const currentLocale = i18n.language?.split('-')[0] || 'es';
-  const canTranslateComment = comment.contentLanguage && comment.contentLanguage !== currentLocale;
 
   const reactions = comment.reactions || { LIKE: 0, LOVE: 0, ANGRY: 0 };
   const replies = comment.replies || [];
-  const hasReplies = (replies.length > 0) || (Boolean(comment.replies_count) && comment.replies_count! > 0);
+  const hasReplies = commentHasReplies(comment);
   const isHighlighted = highlightId === comment.id;
 
   useEffect(() => {
@@ -81,7 +217,7 @@ export function Comment({
   const MAX_REPLY_DEPTH = 3;
   const MAX_SHOW_REPLIES_DEPTH = 2;
 
-  const canReply = depth < MAX_REPLY_DEPTH - 1;
+  const canReply = depth < MAX_REPLY_DEPTH - 1 && Boolean(onReply);
   const canShowReplies = depth < MAX_SHOW_REPLIES_DEPTH;
 
   const handleSubmitReply = () => {
@@ -89,7 +225,8 @@ export function Comment({
     onReply(comment.id);
   };
 
-  const avatarSize = depth === 0 ? 'w-10 h-10' : depth === 1 ? 'w-9 h-9' : 'w-8 h-8';
+  const avatarSize = getAvatarSize(depth);
+  const indents = getIndents(depth);
 
   const toggleCollapse = () => setCollapsed(c => !c);
 
@@ -98,8 +235,6 @@ export function Comment({
       "relative",
       depth > 0 && "ml-7"
     )}>
-
-
 
       {collapsed ? (
         <button
@@ -130,22 +265,7 @@ export function Comment({
           className="group relative flex gap-4 p-4 rounded-[24px] transition-all hover:bg-border-main/5"
         >
           <div className="shrink-0">
-            <button type="button" onClick={() => onUserClick?.(comment.user)} className="block text-left">
-              <div className="relative">
-                {comment.avatar ? (
-                  <img
-                    src={comment.avatar}
-                    alt=""
-                    className={cn(avatarSize, "rounded-full object-cover border-2 border-border-main/10")}
-                    referrerPolicy="no-referrer"
-                  />
-                ) : (
-                  <div className={cn(avatarSize, "rounded-full bg-primary/20 border-2 border-primary/10 flex items-center justify-center text-sm font-bold text-primary")}>
-                    {comment.user?.charAt(0).toUpperCase() || '?'}
-                  </div>
-                )}
-              </div>
-            </button>
+            <CommentAvatar comment={comment} size={avatarSize} onUserClick={onUserClick} />
           </div>
 
           <div className="flex-1 space-y-2">
@@ -176,67 +296,27 @@ export function Comment({
               {showCommentTranslation && translatedComment?.commentId === comment.id ? translatedComment.content : comment.text}
             </p>
             
-            <div className="flex items-center gap-4 pt-1">
-              {ENABLE_TRANSLATIONS && canTranslateComment && (
-                <>
-                  {!showCommentTranslation || translatedComment?.commentId !== comment.id ? (
-                    <button
-                      onClick={() => translateCommentContent(comment.id, currentLocale)}
-                      disabled={isCommentTranslating}
-                      className="text-[9px] font-black text-text-muted hover:text-primary hover:bg-primary/5 px-2 py-1 rounded-lg transition-all uppercase tracking-widest flex items-center gap-1 disabled:opacity-50"
-                    >
-                      {isCommentTranslating ? (
-                        <Loader2 className="w-3 h-3 animate-spin" />
-                      ) : (
-                        <Languages className="w-3 h-3" />
-                      )}
-                      {t('cases.translate')}
-                    </button>
-                  ) : (
-                    <button
-                      onClick={() => {
-                        setTranslatedComment(null);
-                        showOriginal();
-                      }}
-                      className="text-[9px] font-black text-primary hover:text-primary/80 px-2 py-1 rounded-lg transition-all uppercase tracking-widest flex items-center gap-1"
-                    >
-                      {t('cases.seeOriginal')}
-                      <span className="text-[7px] font-medium text-text-muted normal-case tracking-normal">
-                        ({translatedComment?.sourceLanguage?.toUpperCase()})
-                      </span>
-                    </button>
-                  )}
-                </>
-              )}
-              {canReply && (
-                <button
-                  onClick={handleSubmitReply}
-                  className="cursor-pointer text-[9px] font-black text-text-muted hover:text-secondary hover:bg-secondary/5 px-2 py-1 rounded-lg transition-all uppercase tracking-widest flex items-center gap-1"
-                >
-                  <Reply className="w-3 h-3" />
-                  {t('comments.reply')}
-                </button>
-              )}
-              {comment.isOwner && onDelete && (
-                <button
-                  onClick={() => onDelete(comment.id)}
-                  disabled={isDeleting}
-                  className="text-[9px] font-black text-secondary hover:text-red-500 transition-colors uppercase tracking-widest flex items-center gap-1 disabled:opacity-50"
-                >
-                  {isDeleting ? <Loader2 className="w-3 h-3 animate-spin" /> : <Trash2 className="w-3 h-3" />}
-                  {t('comments.delete')}
-                </button>
-              )}
-              {hasReplies && canShowReplies && (
-                <button
-                  onClick={() => setShowReplies(!showReplies)}
-                  className="text-[10px] font-black text-primary/80 hover:text-primary transition-colors flex items-center gap-1"
-                >
-                  <span className="text-[8px]">↳</span>
-                  {showReplies ? t('comments.hideReplies') : `${t('comments.showReplies')} (${replies.length || comment.replies_count})`}
-                </button>
-              )}
-            </div>
+            <CommentActions
+              t={t}
+              comment={comment}
+              currentLocale={currentLocale}
+              canReply={canReply}
+              canShowReplies={canShowReplies}
+              hasReplies={hasReplies}
+              showReplies={showReplies}
+              isDeleting={isDeleting}
+              isCommentTranslating={isCommentTranslating}
+              showCommentTranslation={showCommentTranslation}
+              translatedComment={translatedComment}
+              onTranslate={() => translateCommentContent(comment.id, currentLocale)}
+              onShowOriginal={() => {
+                setTranslatedComment(null);
+                showOriginal();
+              }}
+              onReplyClick={handleSubmitReply}
+              onDeleteClick={onDelete ? () => onDelete(comment.id) : undefined}
+              onToggleReplies={() => setShowReplies(!showReplies)}
+            />
           </div>
         </motion.div>
       )}
@@ -250,15 +330,14 @@ export function Comment({
             exit={{ opacity: 0 }}
             transition={{ duration: 0.2 }}
           >
-            {/* Connector line: desde el centro inferior del avatar hasta el final de los hijos */}
             <motion.div
               initial={{ opacity: 0, scaleY: 0 }}
               animate={{ opacity: 1, scaleY: 1 }}
               exit={{ opacity: 0, scaleY: 0 }}
               transition={{ duration: 0.25, ease: "easeOut" }}
               style={{
-                left: `${16 + (depth === 0 ? 20 : depth === 1 ? 18 : 16)}px`,
-                top: `${16 + (depth === 0 ? 40 : depth === 1 ? 36 : 32) + 4}px`,
+                left: `${16 + indents.soft}px`,
+                top: `${16 + indents.gap + 4}px`,
                 bottom: 0,
                 transformOrigin: 'top',
               }}

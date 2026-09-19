@@ -34,10 +34,10 @@ const CATEGORIES = ['Relationship', 'Friendship', 'Work', 'Family', 'Other'];
 function EvidenceEditor({
   images,
   onKeepChange,
-}: {
+}: Readonly<{
   images: EvidenceItem[];
   onKeepChange: (keepIds: string[], newFiles: File[]) => void;
-}) {
+}>) {
   const { t } = useTranslation();
   const [selectedIds, setSelectedIds] = useState<string[]>(images.map((img) => img.id));
   const [newFiles, setNewFiles] = useState<File[]>([]);
@@ -107,7 +107,7 @@ function EvidenceEditor({
             );
           })}
           {newPreviews.map((url, idx) => (
-            <div key={`new-${idx}`} className="relative aspect-[4/3] rounded-2xl overflow-hidden border-2 border-primary/50">
+            <div key={url} className="relative aspect-[4/3] rounded-2xl overflow-hidden border-2 border-primary/50">
               <img src={url} alt="" className="w-full h-full object-cover" />
               <div className="absolute top-2 right-2 w-6 h-6 bg-primary rounded-full flex items-center justify-center">
                 <svg className="w-4 h-4 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor">

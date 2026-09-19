@@ -1,4 +1,4 @@
-import React, { useEffect, useState, useRef } from 'react';
+import React, { useEffect, useState } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { motion, AnimatePresence } from 'motion/react';
 import { MoreVertical, AlertTriangle, Flag, Trash2, Pencil } from 'lucide-react';
@@ -15,7 +15,7 @@ import { apiClient } from '@api/client';
 import { useToast } from '@components/ui/Toast';
 import { useTranslation } from 'react-i18next';
 import { PageLayout } from '@layout/PageLayout';
-import { SEO } from '@components/ui/SEO';
+import { Seo } from '@components/ui/SEO';
 import { CaseDetailSkeleton } from '@components/ui/Skeleton';
 
 export function CaseDetailPage() {
@@ -31,14 +31,11 @@ export function CaseDetailPage() {
   const [isCommenting, setIsCommenting] = useState(false);
   const [isReacting, setIsReacting] = useState(false);
   const [isDeletingComment, setIsDeletingComment] = useState(false);
-  const [newCommentsCount, setNewCommentsCount] = useState(0);
   const [showReportModal, setShowReportModal] = useState(false);
   const [showEditImagesModal, setShowEditImagesModal] = useState(false);
   const [showDeleteModal, setShowDeleteModal] = useState(false);
   const [showReportMenu, setShowReportMenu] = useState(false);
   const [showEditCaseModal, setShowEditCaseModal] = useState(false);
-  const commentsCountRef = useRef<number>(0);
-  const commentsSkipRef = useRef<number>(0);
 
   // Detalle vía RTK Query. La clave de cache es el id del caso o, en rutas
   // semánticas, `username/slug`; ambas resuelven el mismo endpoint /cases/<key>.
@@ -64,24 +61,13 @@ export function CaseDetailPage() {
   const totalImages = (caseData?.sideA?.evidence?.length || 0) + (caseData?.sideB?.evidence?.length || 0);
   const isReported = caseData?.report_status === 'REPORTED';
   const isUnderReview = isReported && caseData?.moderation_status === 'FLAGGED';
-  const isResolved = caseData?.report_status === 'RESOLVED';
 
   const [voteCase] = useVoteCaseMutation();
   const [reactToCase] = useReactToCaseMutation();
   const [reactToComment] = useReactToCommentMutation();
   const [saveCase] = useSaveCaseMutation();
   const commentsData = useCommentsData(caseData?.id);
-  const {
-    addComment,
-    deleteComment,
-    showNewComments,
-    fetchOlderComments,
-  } = commentsData;
-
-  const handleShowNewComments = () => {
-    showNewComments();
-  };
-
+  const { addComment, deleteComment } = commentsData;
 
   const handleVote = async (caseId: string, side: 'A' | 'B' | 'BothWrong') => {
     if (isVoting) return;
@@ -160,7 +146,7 @@ const handleAddComment = async (caseId: string, text: string, parentId?: string)
   };
 
   const handleDeleteComment = async (caseId: string, commentId: string) => {
-    if (isDeletingComment || !caseData || !caseData.id) {
+    if (isDeletingComment || !caseData?.id) {
       return;
     }
     setIsDeletingComment(true);
@@ -312,7 +298,7 @@ if (isLoading) {
       </div>
     ) : undefined}
   >
-    <SEO 
+    <Seo 
       title={caseData?.title || t('cases.caseDetails')}
       description={caseData?.sideA.story || undefined}
       image={caseData?.sideA.evidence?.[0]?.url || caseData?.sideB.evidence?.[0]?.url || undefined}

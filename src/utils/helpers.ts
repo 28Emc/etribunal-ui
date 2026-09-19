@@ -223,7 +223,7 @@ export function safeJsonParse<T>(json: string, fallback: T): T {
  * atributos src. Devuelve un placeholder si la URL
  * no es http/https absoluta o relativa segura.
  */
-const DANGEROUS_PROTOCOLS = ['javascript', 'data', 'vbscript', 'blob', 'filesystem'];
+const DANGEROUS_PROTOCOLS: ReadonlySet<string> = new Set(['javascript', 'data', 'vbscript', 'blob', 'filesystem']);
 
 export function sanitizeImageUrl(url: string, fallback = '/placeholder-image.png'): string {
   if (!url) return fallback;
@@ -231,7 +231,7 @@ export function sanitizeImageUrl(url: string, fallback = '/placeholder-image.png
   try {
     const parsed = new URL(url, window.location.origin);
 
-    if (DANGEROUS_PROTOCOLS.includes(parsed.protocol.replace(':', ''))) {
+    if (DANGEROUS_PROTOCOLS.has(parsed.protocol.replace(':', ''))) {
       return fallback;
     }
 
@@ -263,6 +263,9 @@ export function calculateVotePercentages(
   const percentA = totalVotes > 0 ? Math.round((votesA / totalVotes) * 100) : 0;
   const percentB = totalVotes > 0 ? Math.round((votesB / totalVotes) * 100) : 0;
   const percentBoth = totalVotes > 0 ? 100 - percentA - percentB : 0;
-  const winner = percentA > percentB ? 'A' : percentB > percentA ? 'B' : 'Tie';
+  let winner: 'A' | 'B' | 'Tie';
+  if (percentA > percentB) winner = 'A';
+  else if (percentB > percentA) winner = 'B';
+  else winner = 'Tie';
   return { totalVotes, percentA, percentB, percentBoth, winner };
 }

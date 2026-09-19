@@ -4,6 +4,7 @@ import { useParams, useNavigate } from 'react-router-dom';
 import { Settings, LogOut, Users, UserX, BookmarkCheck, Gavel, History, Share2, X } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 import type { Case, User } from '@typings/index';
+type UserVoteType = 'A' | 'B' | 'BOTH_WRONG' | undefined;
 import { cn, getCasePath } from '@utils/helpers';
 import { apiClient } from '@api/client';
 import { Skeleton } from '@components/ui/Skeleton';
@@ -17,7 +18,7 @@ import { PageLayout } from '@layout/PageLayout';
 import { ShareModal } from '@components/ui/ShareModal';
 import type { ShareType } from '@hooks/useShare';
 import { useInfiniteScroll } from '@shared/hooks/useInfiniteScroll';
-import { SEO } from '@shared/components/SEO';
+import { Seo } from '@shared/components/SEO';
 import { CaseCard } from '@components/ui/CaseCard';
 import {
   useGetUserCasesQuery,
@@ -367,7 +368,7 @@ export const ProfilePage: React.FC = () => {
         tooltip: t('share.shareThis')
       }}
     >
-      <SEO 
+      <Seo 
         title={displayUser?.username || targetUsername || ''}
         description={`Perfil de ${displayUser?.username || targetUsername || ''} en eTRIBUNAL`}
         image={displayUser?.avatar || undefined}
@@ -468,11 +469,12 @@ export const ProfilePage: React.FC = () => {
               </div>
 
               <div className="space-y-4">
-                {loadingSavedCases ? (
+                {loadingSavedCases && (
                   <div className="py-12 text-center">
                     <div className="w-6 h-6 border-2 border-primary/30 border-t-primary rounded-full animate-spin mx-auto" />
                   </div>
-                ) : savedCasesTab === 'created' ? (
+                )}
+                {!loadingSavedCases && savedCasesTab === 'created' && (
                   createdCases.length === 0 ? (
                     <div className="py-12 text-center bg-card border border-border-main/10 rounded-[32px]">
                       <p className="text-[10px] font-black text-text-muted uppercase tracking-widest italic opacity-40">
@@ -495,7 +497,7 @@ export const ProfilePage: React.FC = () => {
                             onOpenDetail={handleSelectCase}
                             onViewProfile={handleViewProfile}
                             onShare={handleShareOpen}
-                            userVote={currentUser?.votes?.[caseData.id] as 'A' | 'B' | 'BOTH_WRONG' | undefined}
+                            userVote={currentUser?.votes?.[caseData.id] as UserVoteType}
                             onVote={handleVote}
                             onToggleSave={handleToggleSave}
                             isSaved={caseData.isSaved}
@@ -522,8 +524,8 @@ export const ProfilePage: React.FC = () => {
                         </div>
                       )}
                     </>
-                  )
-                ) : savedCasesTab === 'saved' && isOwnProfile ? (
+                  ))}
+                {!loadingSavedCases && savedCasesTab === 'saved' && isOwnProfile && (
                   savedCases.length === 0 ? (
                     <div className="py-12 text-center bg-card border border-border-main/10 rounded-[32px]">
                       <BookmarkCheck className="w-8 h-8 text-text-muted mx-auto mb-2 opacity-40" />
@@ -547,7 +549,7 @@ export const ProfilePage: React.FC = () => {
                             onOpenDetail={handleSelectCase}
                             onViewProfile={handleViewProfile}
                             onShare={handleShareOpen}
-                            userVote={currentUser?.votes?.[caseData.id] as 'A' | 'B' | 'BOTH_WRONG' | undefined}
+                            userVote={currentUser?.votes?.[caseData.id] as UserVoteType}
                             onVote={handleVote}
                             onToggleSave={handleToggleSave}
                             isSaved={caseData.isSaved}
@@ -574,8 +576,8 @@ export const ProfilePage: React.FC = () => {
                         </div>
                       )}
                     </>
-                  )
-                ) : savedCasesTab === 'voted' && isOwnProfile ? (
+                  ))}
+                {!loadingSavedCases && savedCasesTab === 'voted' && isOwnProfile && (
                   votedCases.length === 0 ? (
                     <div className="py-12 text-center bg-card border border-border-main/10 rounded-[32px]">
                       <History className="w-8 h-8 text-text-muted mx-auto mb-2 opacity-40" />
@@ -599,7 +601,7 @@ export const ProfilePage: React.FC = () => {
                             onOpenDetail={handleSelectCase}
                             onViewProfile={handleViewProfile}
                             onShare={handleShareOpen}
-                            userVote={currentUser?.votes?.[caseData.id] as 'A' | 'B' | 'BOTH_WRONG' | undefined}
+                            userVote={currentUser?.votes?.[caseData.id] as UserVoteType}
                             onVote={handleVote}
                             onToggleSave={handleToggleSave}
                             isSaved={caseData.isSaved}
@@ -626,8 +628,11 @@ export const ProfilePage: React.FC = () => {
                         </div>
                       )}
                     </>
-                  )
-                ) : (
+                  ))}
+                {!loadingSavedCases &&
+                  savedCasesTab !== 'created' &&
+                  !(savedCasesTab === 'saved' && isOwnProfile) &&
+                  !(savedCasesTab === 'voted' && isOwnProfile) && (
                   <div className="py-12 text-center bg-card border border-border-main/10 rounded-[32px]">
                     <p className="text-[10px] font-black text-text-muted uppercase tracking-widest italic opacity-40">
                       {isOwnProfile ? t('profile.noCasesYet') : t('profile.noOpenCases')}
@@ -672,18 +677,20 @@ export const ProfilePage: React.FC = () => {
               </div>
 
               <div className="flex-1 overflow-y-auto space-y-3 no-scrollbar">
-                {loadingFollowers ? (
+                {loadingFollowers && (
                   <div className="py-12 text-center">
                     <div className="w-6 h-6 border-2 border-primary/30 border-t-primary rounded-full animate-spin mx-auto" />
                   </div>
-                ) : followersList.length === 0 ? (
+                )}
+                {!loadingFollowers && followersList.length === 0 && (
                   <div className="py-12 text-center">
                     <UserX className="w-12 h-12 text-text-muted/50 mx-auto mb-3" />
                     <p className="text-[10px] font-black text-text-muted uppercase tracking-widest italic opacity-60">
                       {t('profile.noFollowersYet')}
                     </p>
                   </div>
-                ) : (
+                )}
+                {!loadingFollowers && followersList.length > 0 && (
                   followersList.map((follower: any) => (
                     <div key={follower.follower.id} className="w-full flex items-center gap-4 p-4 bg-border-main/5 border border-border-main/10 rounded-[24px]">
                       <button onClick={() => { setShowFollowers(false); navigate(`/users/${follower.follower.username}`); }}>
@@ -731,18 +738,20 @@ export const ProfilePage: React.FC = () => {
               </div>
 
               <div className="flex-1 overflow-y-auto space-y-3 no-scrollbar">
-                {loadingFollowers ? (
+                {loadingFollowers && (
                   <div className="py-12 text-center">
                     <div className="w-6 h-6 border-2 border-primary/30 border-t-primary rounded-full animate-spin mx-auto" />
                   </div>
-                ) : followingList.length === 0 ? (
+                )}
+                {!loadingFollowers && followingList.length === 0 && (
                   <div className="py-12 text-center">
                     <UserX className="w-12 h-12 text-text-muted/50 mx-auto mb-3" />
                     <p className="text-[10px] font-black text-text-muted uppercase tracking-widest italic opacity-60">
                       {t('profile.notFollowingAnyone')}
                     </p>
                   </div>
-                ) : (
+                )}
+                {!loadingFollowers && followingList.length > 0 && (
                   followingList.map((followed: any) => (
                     <div key={followed.following.id} className="w-full flex items-center gap-4 p-4 bg-border-main/5 border border-border-main/10 rounded-[24px]">
                       <button onClick={() => { setShowFollowing(false); navigate(`/users/${followed.following.username}`); }}>

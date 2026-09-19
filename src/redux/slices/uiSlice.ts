@@ -56,10 +56,7 @@ function getInitialTheme(): ThemeMode {
   const saved = localStorage.getItem('etribunal_theme');
   if (saved === 'light' || saved === 'dark') return saved;
 
-  if (
-    window.matchMedia &&
-    window.matchMedia('(prefers-color-scheme: light)').matches
-  ) {
+  if (window.matchMedia?.('(prefers-color-scheme: light)').matches) {
     return 'light';
   }
   return 'dark';
@@ -88,13 +85,13 @@ const uiSlice = createSlice({
 
       // Actualizar el atributo data-theme en el <html>
       // para que Tailwind CSS aplique las variables correctas
-      document.documentElement.setAttribute('data-theme', state.theme);
+      document.documentElement.dataset.theme = state.theme;
     },
 
     setTheme(state, action: PayloadAction<ThemeMode>) {
       state.theme = action.payload;
       localStorage.setItem('etribunal_theme', state.theme);
-      document.documentElement.setAttribute('data-theme', state.theme);
+      document.documentElement.dataset.theme = state.theme;
     },
 
     // --- Sidebar ---
@@ -117,7 +114,7 @@ const uiSlice = createSlice({
 
     // --- Toasts ---
     addToast(state, action: PayloadAction<Omit<ToastItem, 'id'>>) {
-      const id = `toast-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
+      const id = crypto.randomUUID();
       state.toasts.push({ ...action.payload, id });
     },
 

@@ -8,7 +8,7 @@ interface CategoryFilterProps {
   onCategoryChange: (category: string) => void;
 }
 
-export function CategoryFilter({ selectedCategory, onCategoryChange }: CategoryFilterProps) {
+export function CategoryFilter({ selectedCategory, onCategoryChange }: Readonly<CategoryFilterProps>) {
   const { t } = useTranslation();
 
   const categories = [

@@ -2,7 +2,8 @@ import React, { memo, useState, useRef, useEffect, useCallback } from 'react';
 import { createPortal } from 'react-dom';
 import { motion } from 'motion/react';
 import { useTranslation } from 'react-i18next';
-import { Loader2, ThumbsUp, Heart, Angry } from 'lucide-react';
+import type { TFunction } from 'i18next';
+import { Loader2, ThumbsUp, Heart, Angry, type LucideIcon } from 'lucide-react';
 import { cn, formatNumber } from '@utils/helpers';
 import { ReactionIcon } from './ReactionIcon';
 import type { ReactionType } from './ReactionIcon';
@@ -17,6 +18,147 @@ interface ReactionBarProps {
   size?: 'sm' | 'md';
   className?: string;
   onReactionClick?: () => void;
+}
+
+interface ReactionConfig {
+  type: ReactionType;
+  icon: LucideIcon;
+  labelKey: string;
+  color: string;
+  bg: string;
+  border: string;
+}
+
+function getReactionConfig(isDark: boolean): ReactionConfig[] {
+  return [
+    {
+      type: 'LIKE',
+      icon: ThumbsUp,
+      labelKey: 'reactions.like',
+      color: isDark ? 'text-blue-400' : 'text-blue-700',
+      bg: isDark ? 'bg-blue-400/20' : 'bg-blue-700/20',
+      border: isDark ? 'border-blue-400' : 'border-blue-700',
+    },
+    {
+      type: 'LOVE',
+      icon: Heart,
+      labelKey: 'reactions.love',
+      color: isDark ? 'text-pink-400' : 'text-pink-700',
+      bg: isDark ? 'bg-pink-400/20' : 'bg-pink-700/20',
+      border: isDark ? 'border-pink-400' : 'border-pink-700',
+    },
+    {
+      type: 'ANGRY',
+      icon: Angry,
+      labelKey: 'reactions.angry',
+      color: isDark ? 'text-red-400' : 'text-red-700',
+      bg: isDark ? 'bg-red-400/20' : 'bg-red-700/20',
+      border: isDark ? 'border-red-400' : 'border-red-700',
+    },
+  ];
+}
+
+interface OptionsPopupProps {
+  configs: ReactionConfig[];
+  isDark: boolean;
+  isReacting: boolean;
+  t: TFunction;
+  style: React.CSSProperties | null;
+  onSelect: (type: ReactionType, e: React.MouseEvent) => void;
+  onEnter: () => void;
+  onLeave: () => void;
+}
+
+function OptionsPopup({ configs, isDark, isReacting, t, style, onSelect, onEnter, onLeave }: Readonly<OptionsPopupProps>) {
+  if (!style) return null;
+  return createPortal(
+    <div style={style} className="z-[9999]">
+      <motion.div
+        initial={{ opacity: 0, y: 10, scale: 0.9 }}
+        animate={{ opacity: 1, y: 0, scale: 1 }}
+        transition={{ duration: 0.2 }}
+        onMouseEnter={onEnter}
+        onMouseLeave={onLeave}
+        className={cn(
+          "flex items-center gap-2 p-2 rounded-full",
+          isDark ? "bg-gray-800 border border-gray-700" : "bg-white border border-gray-200",
+          "shadow-lg"
+        )}
+      >
+        {configs.map((config, idx) => (
+          <Tooltip key={config.type} content={t(config.labelKey)} position="top">
+            <motion.button
+              initial={{ opacity: 0, scale: 0 }}
+              animate={{ opacity: 1, scale: 1 }}
+              transition={{ delay: idx * 0.05, duration: 0.08 }}
+              whileHover={{ scale: 1.15 }}
+              whileTap={{ scale: 0.9 }}
+              disabled={isReacting}
+              onClick={(e) => onSelect(config.type, e)}
+              className={cn(
+                "p-2 rounded-full transition-all",
+                config.bg,
+                config.border,
+                config.color
+              )}
+            >
+              <config.icon className="w-6 h-6" />
+            </motion.button>
+          </Tooltip>
+        ))}
+      </motion.div>
+    </div>,
+    document.body
+  );
+}
+
+interface CountsPopupProps {
+  configs: ReactionConfig[];
+  isDark: boolean;
+  counts: { LIKE: number; LOVE?: number; ANGRY: number };
+  style: React.CSSProperties | null;
+  onEnter: () => void;
+  onLeave: () => void;
+}
+
+function CountsPopup({ configs, isDark, counts, style, onEnter, onLeave }: Readonly<CountsPopupProps>) {
+  if (!style) return null;
+  return createPortal(
+    <div style={style} className="z-[9999]">
+      <motion.div
+        initial={{ opacity: 0, y: 10, scale: 0.9 }}
+        animate={{ opacity: 1, y: 0, scale: 1 }}
+        transition={{ duration: 0.2 }}
+        onMouseEnter={onEnter}
+        onMouseLeave={onLeave}
+        className={cn(
+          "flex flex-col gap-1 p-1.5 rounded-2xl",
+          isDark ? "bg-gray-800 border border-gray-700" : "bg-white border border-gray-200",
+          "shadow-lg"
+        )}
+      >
+        {configs.map((config, idx) => (
+          <motion.div
+            key={config.type}
+            initial={{ opacity: 0, scale: 0 }}
+            animate={{ opacity: 1, scale: 1 }}
+            transition={{ delay: idx * 0.05, duration: 0.08 }}
+            className={cn(
+              "flex items-center gap-1.5 px-2 py-1.5 rounded-full",
+              config.bg,
+              config.border
+            )}
+          >
+            <config.icon className="w-4 h-4" />
+            <span className={cn("text-xs font-black", config.color)}>
+              {formatNumber(counts[config.type as keyof typeof counts] || 0)}
+            </span>
+          </motion.div>
+        ))}
+      </motion.div>
+    </div>,
+    document.body
+  );
 }
 
 const usePopupPosition = (ref: React.RefObject<HTMLButtonElement | null>) => {
@@ -34,6 +176,7 @@ const usePopupPosition = (ref: React.RefObject<HTMLButtonElement | null>) => {
 };
 
 const ReactionBarComponent: React.FC<ReactionBarProps> = ({
+  targetId,
   reactions,
   userReaction,
   onReaction,
@@ -43,39 +186,14 @@ const ReactionBarComponent: React.FC<ReactionBarProps> = ({
   onReactionClick,
 }) => {
   const { t } = useTranslation();
-  const isDark = document.documentElement.getAttribute('data-theme') !== 'light';
+  const isDark = document.documentElement.dataset.theme !== 'light';
   const buttonRef = useRef<HTMLButtonElement>(null);
   const countsBtnRef = useRef<HTMLButtonElement>(null);
   const calcBtnPos = usePopupPosition(buttonRef);
   const calcCountsPos = usePopupPosition(countsBtnRef);
   const isTouchInteraction = useRef(false);
 
-  const reactionConfig = [
-    { 
-      type: 'LIKE' as ReactionType, 
-      icon: ThumbsUp, 
-      labelKey: 'reactions.like', 
-      color: isDark ? 'text-blue-400' : 'text-blue-700',
-      bg: isDark ? 'bg-blue-400/20' : 'bg-blue-700/20',
-      border: isDark ? 'border-blue-400' : 'border-blue-700',
-    },
-    { 
-      type: 'LOVE' as ReactionType, 
-      icon: Heart, 
-      labelKey: 'reactions.love', 
-      color: isDark ? 'text-pink-400' : 'text-pink-700',
-      bg: isDark ? 'bg-pink-400/20' : 'bg-pink-700/20',
-      border: isDark ? 'border-pink-400' : 'border-pink-700',
-    },
-    { 
-      type: 'ANGRY' as ReactionType, 
-      icon: Angry, 
-      labelKey: 'reactions.angry', 
-      color: isDark ? 'text-red-400' : 'text-red-700',
-      bg: isDark ? 'bg-red-400/20' : 'bg-red-700/20',
-      border: isDark ? 'border-red-400' : 'border-red-700',
-    },
-  ];
+  const reactionConfig = getReactionConfig(isDark);
 
 const isSmall = size === 'sm';
   const [localReactions, setLocalReactions] = useState(reactions);
@@ -217,14 +335,7 @@ const isSmall = size === 'sm';
     }
   };
 
-  const handleMainPointerUp = (e: React.PointerEvent) => {
-    if (e.pointerType === 'touch' && showOptTimer.current) {
-      clearTimeout(showOptTimer.current);
-      showOptTimer.current = null;
-    }
-  };
-
-  const handleMainPointerLeave = (e: React.PointerEvent) => {
+  const handleMainPointerEnd = (e: React.PointerEvent) => {
     if (e.pointerType === 'touch' && showOptTimer.current) {
       clearTimeout(showOptTimer.current);
       showOptTimer.current = null;
@@ -270,91 +381,28 @@ const isSmall = size === 'sm';
     return () => window.removeEventListener('scroll', handler, true);
   }, [showOptions, showCounts]);
 
-  const renderOptionsPopup = () => {
-    if (!showOptions || !optionsStyle) return null;
-    return createPortal(
-      <div style={optionsStyle} className="z-[9999]">
-        <motion.div
-          initial={{ opacity: 0, y: 10, scale: 0.9 }}
-          animate={{ opacity: 1, y: 0, scale: 1 }}
-          transition={{ duration: 0.2 }}
-          onMouseEnter={() => { isOverOptions.current = true; clearOptTimers(); }}
-          onMouseLeave={() => { isOverOptions.current = false; scheduleHideOptions(200); }}
-          className={cn(
-            "flex items-center gap-2 p-2 rounded-full",
-            isDark ? "bg-gray-800 border border-gray-700" : "bg-white border border-gray-200",
-            "shadow-lg"
-          )}
-        >
-          {reactionConfig.map((config, idx) => (
-            <Tooltip key={config.type} content={t(config.labelKey)} position="top">
-              <motion.button
-                initial={{ opacity: 0, scale: 0 }}
-                animate={{ opacity: 1, scale: 1 }}
-                transition={{ delay: idx * 0.05, duration: 0.08 }}
-                whileHover={{ scale: 1.15 }}
-                whileTap={{ scale: 0.9 }}
-                disabled={isReacting}
-                onClick={(e) => handleReactionSelect(config.type, e)}
-                className={cn(
-                  "p-2 rounded-full transition-all",
-                  config.bg,
-                  config.border,
-                  config.color
-                )}
-              >
-                <config.icon className="w-6 h-6" />
-              </motion.button>
-            </Tooltip>
-          ))}
-        </motion.div>
-      </div>,
-      document.body
-    );
+  const handleOptionsEnter = () => {
+    isOverOptions.current = true;
+    clearOptTimers();
   };
 
-  const renderCountsPopup = () => {
-    if (!showCounts || !countsStyle) return null;
-    return createPortal(
-      <div style={countsStyle} className="z-[9999]">
-        <motion.div
-          initial={{ opacity: 0, y: 10, scale: 0.9 }}
-          animate={{ opacity: 1, y: 0, scale: 1 }}
-          transition={{ duration: 0.2 }}
-          onMouseEnter={() => { isOverCounts.current = true; clearCountsTimers(); }}
-          onMouseLeave={() => { isOverCounts.current = false; scheduleHideCounts(200); }}
-          className={cn(
-            "flex flex-col gap-1 p-1.5 rounded-2xl",
-            isDark ? "bg-gray-800 border border-gray-700" : "bg-white border border-gray-200",
-            "shadow-lg"
-          )}
-        >
-          {reactionConfig.map((config, idx) => (
-            <motion.div
-              key={config.type}
-              initial={{ opacity: 0, scale: 0 }}
-              animate={{ opacity: 1, scale: 1 }}
-              transition={{ delay: idx * 0.05, duration: 0.08 }}
-              className={cn(
-                "flex items-center gap-1.5 px-2 py-1.5 rounded-full",
-                config.bg,
-                config.border
-              )}
-            >
-              <config.icon className="w-4 h-4" />
-              <span className={cn("text-xs font-black", config.color)}>
-                {formatNumber(localReactions[config.type as keyof typeof localReactions] || 0)}
-              </span>
-            </motion.div>
-          ))}
-        </motion.div>
-      </div>,
-      document.body
-    );
+  const handleOptionsLeave = () => {
+    isOverOptions.current = false;
+    scheduleHideOptions(200);
+  };
+
+  const handleCountsEnter = () => {
+    isOverCounts.current = true;
+    clearCountsTimers();
+  };
+
+  const handleCountsLeave = () => {
+    isOverCounts.current = false;
+    scheduleHideCounts(200);
   };
 
   return (
-    <div className={cn("flex items-center gap-1.5", className)}>
+    <div data-reaction-target={targetId} className={cn("flex items-center gap-1.5", className)}>
       <div
         className="relative"
         onMouseEnter={handleMouseEnter}
@@ -369,9 +417,9 @@ const isSmall = size === 'sm';
           disabled={isReacting}
           onClick={handleMainClick}
           onPointerDown={handleMainPointerDown}
-          onPointerUp={handleMainPointerUp}
-          onPointerLeave={handleMainPointerLeave}
-          onPointerCancel={handleMainPointerLeave}
+          onPointerUp={handleMainPointerEnd}
+          onPointerLeave={handleMainPointerEnd}
+          onPointerCancel={handleMainPointerEnd}
           className={cn(
             "flex items-center gap-1.5 rounded-full border transition-all duration-200",
             isSmall ? "px-2 py-0.5" : "px-3 py-1.5",
@@ -397,7 +445,16 @@ const isSmall = size === 'sm';
           )}
         </motion.button>
 
-        {renderOptionsPopup()}
+        <OptionsPopup
+          configs={reactionConfig}
+          isDark={isDark}
+          isReacting={isReacting}
+          t={t}
+          style={showOptions ? optionsStyle : null}
+          onSelect={handleReactionSelect}
+          onEnter={handleOptionsEnter}
+          onLeave={handleOptionsLeave}
+        />
       </div>
 
       {totalReactions > 0 && (
@@ -424,7 +481,14 @@ const isSmall = size === 'sm';
             </div>
           </motion.button>
 
-          {renderCountsPopup()}
+          <CountsPopup
+            configs={reactionConfig}
+            isDark={isDark}
+            counts={localReactions}
+            style={showCounts ? countsStyle : null}
+            onEnter={handleCountsEnter}
+            onLeave={handleCountsLeave}
+          />
         </div>
       )}
     </div>

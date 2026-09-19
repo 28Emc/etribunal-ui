@@ -207,6 +207,28 @@ export function useAutomation(): UseAutomationState {
 
     const wsUrl = import.meta.env.VITE_WS_URL || 'http://localhost:8083/ws/automation';
     
+    const handleRunTopicMessage = (message: IMessage) => {
+      try {
+        const data = JSON.parse(message.body);
+        if (data.type === 'RUN_UPDATE' || data.type === 'RUN_STARTED' || data.type === 'RUN_CREATED') {
+          const runId: string | undefined = data.id || data.runId;
+          if (!runId) return;
+          const { type, ...runFields } = data;
+          setRuns(prev => {
+            const idx = prev.findIndex(r => r.id === runId);
+            if (idx >= 0) {
+              const updated = [...prev];
+              updated[idx] = { ...updated[idx], ...runFields };
+              return updated;
+            }
+            return [{ ...runFields, id: runId }, ...prev];
+          });
+        }
+      } catch (e) {
+        console.error('[Automation WS] Error parsing run update:', e);
+      }
+    };
+
     const client = new Client({
       webSocketFactory: () => new SockJS(wsUrl),
       connectHeaders: {
@@ -220,27 +242,7 @@ export function useAutomation(): UseAutomationState {
         console.log('[Automation WS] Connected');
         
         // Subscribe to real-time topics
-        client.subscribe('/topic/automation/run', (message: IMessage) => {
-          try {
-            const data = JSON.parse(message.body);
-            if (data.type === 'RUN_UPDATE' || data.type === 'RUN_STARTED' || data.type === 'RUN_CREATED') {
-              const runId: string | undefined = data.id || data.runId;
-              if (!runId) return;
-              const { type, ...runFields } = data;
-              setRuns(prev => {
-                const idx = prev.findIndex(r => r.id === runId);
-                if (idx >= 0) {
-                  const updated = [...prev];
-                  updated[idx] = { ...updated[idx], ...runFields };
-                  return updated;
-                }
-                return [{ ...runFields, id: runId }, ...prev];
-              });
-            }
-          } catch (e) {
-            console.error('[Automation WS] Error parsing run update:', e);
-          }
-        });
+        client.subscribe('/topic/automation/run', handleRunTopicMessage);
 
         client.subscribe('/topic/automation/queue', (message: IMessage) => {
           try {

@@ -163,48 +163,17 @@ describe('ShareModal', () => {
     });
   });
 
-  it('debería abrir WhatsApp al clickear botón social', () => {
+  it.each([
+    { label: 'WhatsApp', expectHost: 'https://wa.me/' },
+    { label: 'X', expectHost: 'https://twitter.com/' },
+    { label: 'Telegram', expectHost: 'https://t.me/' },
+    { label: 'share.email', expectHost: 'mailto:' },
+  ])('debería abrir $label al clickear botón social', ({ label, expectHost }) => {
     const openSpy = vi.spyOn(window, 'open').mockImplementation(() => null);
     render(<ShareModal {...defaultProps} />);
-    fireEvent.click(screen.getByText('WhatsApp'));
+    fireEvent.click(screen.getByText(label));
     expect(openSpy).toHaveBeenCalledWith(
-      expect.stringContaining('https://wa.me/'),
-      '_blank',
-      'noopener,noreferrer'
-    );
-    openSpy.mockRestore();
-  });
-
-  it('debería abrir X/Twitter al clickear botón social', () => {
-    const openSpy = vi.spyOn(window, 'open').mockImplementation(() => null);
-    render(<ShareModal {...defaultProps} />);
-    fireEvent.click(screen.getByText('X'));
-    expect(openSpy).toHaveBeenCalledWith(
-      expect.stringContaining('https://twitter.com/'),
-      '_blank',
-      'noopener,noreferrer'
-    );
-    openSpy.mockRestore();
-  });
-
-  it('debería abrir Telegram al clickear botón social', () => {
-    const openSpy = vi.spyOn(window, 'open').mockImplementation(() => null);
-    render(<ShareModal {...defaultProps} />);
-    fireEvent.click(screen.getByText('Telegram'));
-    expect(openSpy).toHaveBeenCalledWith(
-      expect.stringContaining('https://t.me/'),
-      '_blank',
-      'noopener,noreferrer'
-    );
-    openSpy.mockRestore();
-  });
-
-  it('debería abrir Email al clickear botón Email', () => {
-    const openSpy = vi.spyOn(window, 'open').mockImplementation(() => null);
-    render(<ShareModal {...defaultProps} />);
-    fireEvent.click(screen.getByText('share.email'));
-    expect(openSpy).toHaveBeenCalledWith(
-      expect.stringContaining('mailto:'),
+      expect.stringContaining(expectHost),
       '_blank',
       'noopener,noreferrer'
     );

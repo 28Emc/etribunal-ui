@@ -36,7 +36,7 @@ export function PageLayout({
   showRightButtonMenu = false,
   onCloseRightButtonMenu,
   showBackButton = true
-}: PageLayoutProps) {
+}: Readonly<PageLayoutProps>) {
   const navigate = useNavigate();
 
   const handleBack = () => {
@@ -91,18 +91,24 @@ export function PageLayout({
             
             <div className="flex-1 flex justify-end gap-1">
               {Array.isArray(rightButton) 
-                ? rightButton.map((btn, i) => (
-                    <React.Fragment key={i}>
-                      {renderButton(btn)}
-                    </React.Fragment>
-                  ))
+                ? rightButton.map((btn) => {
+                    const iconName =
+                      typeof btn.icon === 'string'
+                        ? btn.icon
+                        : (btn.icon as { name?: string }).name;
+                    return (
+                      <React.Fragment key={`${iconName ?? ''}-${btn.tooltip ?? ''}`}>
+                        {renderButton(btn)}
+                      </React.Fragment>
+                    );
+                  })
                 : renderButton(rightButton)}
             </div>
           </div>
           <AnimatePresence>
             {showRightButtonMenu && rightButtonMenu && (
               <>
-                <div className="fixed inset-0 z-40" onClick={onCloseRightButtonMenu} />
+                <button type="button" tabIndex={-1} aria-label="Cerrar menú" className="fixed inset-0 z-40 cursor-default" onMouseDown={onCloseRightButtonMenu} />
                 <motion.div 
                   initial={{ opacity: 0, y: -10, scale: 0.95 }} 
                   animate={{ opacity: 1, y: 0, scale: 1 }} 

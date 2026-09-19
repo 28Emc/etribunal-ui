@@ -2,7 +2,7 @@ import React from 'react';
 import { useTranslation } from 'react-i18next';
 import { ShieldAlert, EyeOff, FileWarning, Heart, Scale } from 'lucide-react';
 import { PageLayout } from '@layout/PageLayout';
-import { SEO } from '@components/ui/SEO';
+import { Seo } from '@components/ui/SEO';
 
 export const CommunityGuidelinesPage: React.FC = () => {
   const { t } = useTranslation();
@@ -39,7 +39,7 @@ export const CommunityGuidelinesPage: React.FC = () => {
 
   return (
     <PageLayout title={t('legal.guidelines')}>
-      <SEO title={t('legal.guidelines')} />
+      <Seo title={t('legal.guidelines')} />
       <div className="flex-1 py-8 space-y-12 pb-32">
         <div className="space-y-4">
           <div className="flex items-center gap-3">
@@ -54,9 +54,9 @@ export const CommunityGuidelinesPage: React.FC = () => {
         </div>
 
         <div className="space-y-6">
-          {rules.map((rule, i) => (
+          {rules.map((rule) => (
             <div
-              key={i}
+              key={rule.titleKey}
               className="bg-background border border-border-main/10 rounded-[32px] p-6 space-y-4 hover:bg-border-main/10 transition-all border-l-4 border-l-transparent hover:border-l-primary"
             >
               <div className="flex items-center gap-4">

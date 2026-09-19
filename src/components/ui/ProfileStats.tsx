@@ -9,7 +9,7 @@ interface ProfileStatsProps {
   onFollowingClick: () => void;
 }
 
-export function ProfileStats({ user, onFollowersClick, onFollowingClick }: ProfileStatsProps) {
+export function ProfileStats({ user, onFollowersClick, onFollowingClick }: Readonly<ProfileStatsProps>) {
   const { t } = useTranslation();
 
   return (

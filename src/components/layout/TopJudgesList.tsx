@@ -14,7 +14,7 @@ interface TopJudgesListProps {
   isLoggedIn?: boolean;
 }
 
-export function TopJudgesList({ judges, isLoading, onFollow, onViewProfile, onOpenAuth, isLoggedIn }: TopJudgesListProps) {
+export function TopJudgesList({ judges, isLoading, onFollow, onViewProfile, onOpenAuth, isLoggedIn }: Readonly<TopJudgesListProps>) {
   const { t } = useTranslation();
 
   if (isLoading) {
@@ -38,12 +38,16 @@ export function TopJudgesList({ judges, isLoading, onFollow, onViewProfile, onOp
   return (
     <div className="space-y-3">
       {judges.map((user) => (
-        <div 
-          key={user.id} 
-          className="p-4 bg-card border border-border-main/5 shadow-[0_1px_3px_rgba(0,0,0,0.08)] rounded-2xl cursor-pointer"
-          onClick={() => onViewProfile(user.username)}
+        <div
+          key={user.id}
+          className="p-4 bg-card border border-border-main/5 shadow-[0_1px_3px_rgba(0,0,0,0.08)] rounded-2xl"
         >
           <div className="flex items-center gap-3">
+            <button
+              type="button"
+              onClick={() => onViewProfile(user.username)}
+              className="flex items-center gap-3 flex-1 min-w-0 text-left cursor-pointer"
+            >
             <img
               src={user.is_anonymous ? getAnonymousAvatar(user.id) : (user.avatar_url || 'https://picsum.photos/seed/default/100/100')}
               className="w-12 h-12 rounded-full border border-border-main/20 object-cover"
@@ -57,6 +61,7 @@ export function TopJudgesList({ judges, isLoading, onFollow, onViewProfile, onOp
                 {formatNumber(user.followers_count)} {t('profile.followers').toLowerCase()}
               </span>
             </div>
+            </button>
             <button
               onClick={(e) => {
                 e.stopPropagation();

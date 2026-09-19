@@ -22,8 +22,20 @@ export function ProfileHeader({
   confirmFollow,
   onFollowToggle,
   onEditAvatar,
-}: ProfileHeaderProps) {
+}: Readonly<ProfileHeaderProps>) {
   const { t } = useTranslation();
+
+  let followClass = "bg-primary text-white shadow-[0_10px_20px_rgba(51,102,153,0.3)] hover:brightness-110";
+  if (isFollowing) {
+    followClass = confirmFollow
+      ? "bg-secondary text-white border-secondary"
+      : "bg-border-main/10 text-text-main border border-border-main/10 hover:bg-secondary/10 hover:text-secondary hover:border-secondary/20";
+  }
+
+  let followLabel = t('profile.followJudge');
+  if (isFollowing) {
+    followLabel = confirmFollow ? t('profile.confirmUnfollow') : t('profile.following');
+  }
 
   return (
     <section className="flex flex-col items-center text-center space-y-4" aria-label="Judge identity">
@@ -60,24 +72,14 @@ export function ProfileHeader({
           aria-pressed={isFollowing}
           className={cn(
             "mt-4 px-8 py-3 rounded-2xl font-black uppercase tracking-widest text-[10px] transition-all hover:scale-105 active:scale-95 focus:ring-4 focus:ring-primary/30 flex items-center gap-2",
-isFollowing
-                          ? confirmFollow
-                            ? "bg-secondary text-white border-secondary"
-                            : "bg-border-main/10 text-text-main border border-border-main/10 hover:bg-secondary/10 hover:text-secondary hover:border-secondary/20"
-                          : "bg-primary text-white shadow-[0_10px_20px_rgba(51,102,153,0.3)] hover:brightness-110",
-                        isFollowingLoading && "opacity-50 cursor-wait"
-                      )}
+            followClass,
+            isFollowingLoading && "opacity-50 cursor-wait"
+          )}
                     >
                       {isFollowingLoading ? (
                         <div className="w-4 h-4 border-2 border-current border-t-transparent rounded-full animate-spin" />
                       ) : null}
-                      {isFollowingLoading 
-                        ? '...' 
-                        : isFollowing 
-                          ? confirmFollow 
-                            ? t('profile.confirmUnfollow') 
-                            : t('profile.following') 
-                          : t('profile.followJudge')}
+                      {isFollowingLoading ? '...' : followLabel}
         </button>
       )}
     </section>

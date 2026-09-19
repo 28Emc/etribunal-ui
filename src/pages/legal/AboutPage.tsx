@@ -2,7 +2,7 @@ import React from 'react';
 import { useTranslation } from 'react-i18next';
 import { Globe, Users, Scale, Heart, Zap } from 'lucide-react';
 import { PageLayout } from '@layout/PageLayout';
-import { SEO } from '@components/ui/SEO';
+import { Seo } from '@components/ui/SEO';
 
 export const AboutPage: React.FC = () => {
   const { t } = useTranslation();
@@ -31,7 +31,7 @@ export const AboutPage: React.FC = () => {
 
   return (
     <PageLayout title={t('legal.about')}>
-      <SEO title={t('legal.about')} />
+      <Seo title={t('legal.about')} />
       <div className="flex-1 py-8 space-y-12 pb-32">
         <div className="space-y-4">
           <div className="w-20 h-20 rounded-3xl bg-primary/10 flex items-center justify-center">
@@ -59,8 +59,8 @@ export const AboutPage: React.FC = () => {
             {t('legal.whatWeOffer')}
           </h3>
           <div className="space-y-4">
-            {features.map((feature, i) => (
-              <div key={i} className="flex items-start gap-4 p-4 bg-background rounded-2xl border border-border-main/10">
+            {features.map((feature) => (
+              <div key={feature.titleKey} className="flex items-start gap-4 p-4 bg-background rounded-2xl border border-border-main/10">
                 <div className="w-10 h-10 rounded-xl bg-primary/10 flex items-center justify-center shrink-0">
                   <feature.icon className="w-5 h-5 text-primary" />
                 </div>

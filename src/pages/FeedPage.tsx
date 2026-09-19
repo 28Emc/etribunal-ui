@@ -14,7 +14,7 @@ import { ShareModal } from '@components/ui/ShareModal';
 import type { ShareType } from '@hooks/useShare';
 import { getCasePath } from '@utils/helpers';
 import { useInfiniteScroll } from '@hooks/useInfiniteScroll';
-import { SEO } from '@components/ui/SEO';
+import { Seo } from '@components/ui/SEO';
 import { useAppDispatch } from '@redux/hooks';
 import {
   FEED_PAGE_SIZE,
@@ -34,7 +34,7 @@ interface FeedPageProps {
 
 type FeedTabExtended = 'for_you' | 'following' | 'trending' | 'top-judges';
 
-export function FeedPage({ initialTab = 'for_you' }: FeedPageProps) {
+export function FeedPage({ initialTab = 'for_you' }: Readonly<FeedPageProps>) {
   const { t } = useTranslation();
   const navigate = useNavigate();
   const dispatch = useAppDispatch();
@@ -267,7 +267,7 @@ export function FeedPage({ initialTab = 'for_you' }: FeedPageProps) {
       className="flex-1 px-1 md:px-4 pb-32 lg:pb-12 w-full box-border overflow-x-hidden overflow-y-auto no-scrollbar"
       role="main"
     >
-      <SEO 
+      <Seo 
         title={titles[initialTab] || ''}
         jsonLd={{
           '@context': 'https://schema.org',
@@ -322,7 +322,7 @@ export function FeedPage({ initialTab = 'for_you' }: FeedPageProps) {
       )}
 
       <div className="space-y-5 px-0">
-        {isTopJudges ? (
+        {isTopJudges && (
           <TopJudgesList
             judges={topJudges ?? []}
             isLoading={isLoadingTopJudges}
@@ -331,7 +331,8 @@ export function FeedPage({ initialTab = 'for_you' }: FeedPageProps) {
             onOpenAuth={openAuthModal}
             isLoggedIn={!!currentUser}
           />
-        ) : cases.length > 0 ? (
+        )}
+        {!isTopJudges && cases.length > 0 && (
           <>
             <CaseList
               cases={cases}
@@ -356,14 +357,12 @@ export function FeedPage({ initialTab = 'for_you' }: FeedPageProps) {
               )}
             </div>
           </>
-        ) : (
-          isLoading ? (
-            <FeedSkeleton />
-          ) : (
-            <EmptyState 
-              titleKey="profile.noCasesFound" 
-            />
-          )
+        )}
+        {!isTopJudges && cases.length === 0 && isLoading && <FeedSkeleton />}
+        {!isTopJudges && cases.length === 0 && !isLoading && (
+          <EmptyState 
+            titleKey="profile.noCasesFound" 
+          />
         )}
       </div>
       {showShareModal && (

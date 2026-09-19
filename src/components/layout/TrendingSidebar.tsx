@@ -4,7 +4,7 @@ import { TrendingUp, MessageSquare, Scale } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 import { getCircuitState } from '@api/client';
 import { getAnonymousAvatar } from '@services/anonymity';
-import { cn, formatNumber } from '@utils/helpers';
+import { formatNumber } from '@utils/helpers';
 import { useAuth } from '@context/AuthContext';
 import { ConfirmModal } from '@shared/components/ConfirmModal';
 import { UserCard } from '@shared/components/UserCard';
@@ -172,12 +172,13 @@ export const TrendingSidebar: React.FC<TrendingSidebarProps> = React.memo(({
         </div>
 
         <div className={isMobile ? "space-y-2" : "space-y-4"}>
-          {isLoadingJudges ? (
+          {isLoadingJudges && (
             <div className={isMobile ? "space-y-2" : "space-y-4"}>
               <UserCardSkeleton />
               <UserCardSkeleton />
             </div>
-          ) : topJudges.length > 0 ? (
+          )}
+          {!isLoadingJudges && topJudges.length > 0 && (
             topJudges.map((u, i) => (
               <UserCard
                 key={u.id}
@@ -193,7 +194,8 @@ export const TrendingSidebar: React.FC<TrendingSidebarProps> = React.memo(({
                 showCrown={i === 0}
               />
             ))
-          ) : (
+          )}
+          {!isLoadingJudges && topJudges.length === 0 && (
             <div className="flex items-center justify-center h-10 w-full text-xs font-bold text-text-muted tracking-widest py-2">
               {t('profile.noUsersFound')}
             </div>
@@ -209,13 +211,14 @@ export const TrendingSidebar: React.FC<TrendingSidebarProps> = React.memo(({
 
         <div className="flex flex-col gap-4">
           <div className="flex -space-x-3 overflow-hidden px-2">
-            {isLoadingActive ? (
+            {isLoadingActive && (
               <div className="flex items-center gap-2">
                 {[1, 2, 3].map((i) => (
                   <Skeleton key={i} className="w-10 h-10 rounded-full" />
                 ))}
               </div>
-            ) : activeUsers?.users && activeUsers.users.length > 0 ? (
+            )}
+            {!isLoadingActive && activeUsers?.users && activeUsers.users.length > 0 && (
               <>
                 {activeUsers.users.slice(0, isMobile ? 2 : 3).map((u, i) => (
                   <img
@@ -232,7 +235,8 @@ export const TrendingSidebar: React.FC<TrendingSidebarProps> = React.memo(({
                   </div>
                 )}
               </>
-            ) : (
+            )}
+            {!isLoadingActive && !(activeUsers?.users && activeUsers.users.length > 0) && (
               <div className="flex items-center justify-center h-10 w-full text-xs font-bold text-text-muted tracking-widest py-2">
                 {t('sidebar.noActiveUsers')}
               </div>

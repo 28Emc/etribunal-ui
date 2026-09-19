@@ -68,7 +68,6 @@ export const EditImagesModal: React.FC<EditImagesModalProps> = ({ images, onClos
     }
   };
 
-  const totalKept = selectedIds.length + newPreviews.length;
   const hasChanges = selectedIds.length !== images.length || newFiles.length > 0;
 
   return (
@@ -140,7 +139,7 @@ export const EditImagesModal: React.FC<EditImagesModalProps> = ({ images, onClos
             })}
             {newPreviews.map((url, idx) => (
               <div
-                key={`new-${idx}`}
+                key={url}
                 className="relative aspect-[4/3] rounded-2xl overflow-hidden border-2 border-primary/50"
               >
                 <img src={url} alt="" className="w-full h-full object-cover" />

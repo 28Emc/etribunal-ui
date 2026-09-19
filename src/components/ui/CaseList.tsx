@@ -3,9 +3,8 @@ import { motion } from 'motion/react';
 import type { Case } from '@typings/index';
 import { CaseCard } from './CaseCard';
 import { Loader2 } from 'lucide-react';
-import { LoadingState, EmptyState } from '@shared/components/LoadingState';
+import { EmptyState } from '@shared/components/LoadingState';
 import { CaseCardSkeleton } from '@shared/components/Skeleton';
-import { useTranslation } from 'react-i18next';
 
 interface CaseListProps {
   cases: Case[];
@@ -42,7 +41,6 @@ export const CaseList = memo(({
   hasMore,
   onOpenAuth,
 }: CaseListProps) => {
-  const { t } = useTranslation();
 
   if (isLoading && cases.length === 0) {
     return (

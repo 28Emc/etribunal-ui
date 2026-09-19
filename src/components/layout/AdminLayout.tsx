@@ -1,9 +1,8 @@
-import React, { useState, useEffect, Suspense, lazy } from 'react';
+import React, { useState, useEffect, Suspense } from 'react';
 import { useNavigate, useLocation, type Location } from 'react-router-dom';
 import { LoadingState } from '@components/ui/LoadingState';
 import { useAuth } from '@context/AuthContext';
 import { AUTOMATION_ADMIN_ROLES } from '@hooks/useAutomation';
-import { AdminHeader } from './AdminHeader';
 import { cn } from '@utils/helpers';
 import { motion, AnimatePresence } from 'motion/react';
 

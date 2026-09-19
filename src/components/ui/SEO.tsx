@@ -18,7 +18,7 @@ const SITE_NAME = 'eTRIBUNAL';
 const DEFAULT_DESCRIPTION = 'Voz. Debate. Sentencia';
 const DEFAULT_IMAGE = '/icons/eTribunal-logo-vertical.png';
 
-export function SEO({ title, description, image, url, jsonLd }: SEOProps) {
+export function Seo({ title, description, image, url, jsonLd }: Readonly<SEOProps>) {
   const fullTitle = title ? `${title} | ${SITE_NAME}` : `${SITE_NAME} — Justicia Colaborativa`;
   const desc = description || DEFAULT_DESCRIPTION;
   const img = image || DEFAULT_IMAGE;

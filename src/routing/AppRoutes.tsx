@@ -35,10 +35,10 @@ type Role = User['role'];
 function RoleGate({
   roles,
   children,
-}: {
+}: Readonly<{
   roles: Role[];
   children: React.ReactNode;
-}) {
+}>) {
   const { currentUser, isLoading } = useAuth();
   if (isLoading) return <LoadingState />;
   if (!currentUser || !roles.includes(currentUser.role)) {
@@ -50,10 +50,10 @@ function RoleGate({
 const DEEP_LINK_KEY = 'etribunal_deep_link';
 
 function parseDeepLink(pathname: string): string | null {
-  const caseMatch = pathname.match(/^\/cases?\//);
+  const caseMatch = /^\/cases?\//.exec(pathname);
   if (caseMatch) return pathname;
 
-  const userMatch = pathname.match(/^\/users?\//);
+  const userMatch = /^\/users?\//.exec(pathname);
   if (userMatch) return pathname;
 
   return null;

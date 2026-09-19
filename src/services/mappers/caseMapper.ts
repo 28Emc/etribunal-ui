@@ -148,12 +148,12 @@ export const mapDbCommentToComment = (
  * polling de comentarios nuevos (cursor `since` del backend).
  */
 function normalizeCommentTimestamp(value: unknown): string {
-  if (value instanceof Date && !isNaN(value.getTime())) {
+  if (value instanceof Date && !Number.isNaN(value.getTime())) {
     return value.toISOString();
   }
   if (typeof value === 'string') {
     const parsed = new Date(value);
-    if (!isNaN(parsed.getTime())) {
+    if (!Number.isNaN(parsed.getTime())) {
       return parsed.toISOString();
     }
   }

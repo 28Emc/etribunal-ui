@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { useTranslation } from 'react-i18next';
-import { useNavigate, useLocation, Outlet, type Location, Link } from 'react-router-dom';
-import { Cpu, Users, Shield, BarChart, Settings, ChevronLeft, ChevronRight, X, RotateCcw } from 'lucide-react';
+import { useNavigate, Outlet, type Location, Link } from 'react-router-dom';
+import { Cpu, Users, Shield, BarChart, Settings, ChevronLeft, X, RotateCcw } from 'lucide-react';
 import { cn } from '@utils/helpers';
 import { Tooltip } from '@shared/components/Tooltip';
 import { motion, AnimatePresence } from 'motion/react';
@@ -73,18 +73,16 @@ export const AdminLayoutContent = ({ collapsed, onCollapseChange, location }: Ad
               />
             )}
             {/* Desktop collapsed or mobile: isotipo */}
-            {(collapsed || true) && (
-              <img
-                src={theme === 'dark' ? '/icons/eTribunal-isotipo-bn.png' : '/icons/eTribunal-isotipo.png'}
-                alt="eTribunal"
-                className={cn(
-                  'h-8 w-auto transition-opacity',
-                  'lg:hidden',
-                  collapsed && 'lg:block',
-                  !collapsed && 'lg:hidden'
-                )}
-              />
-            )}
+            <img
+              src={theme === 'dark' ? '/icons/eTribunal-isotipo-bn.png' : '/icons/eTribunal-isotipo.png'}
+              alt="eTribunal"
+              className={cn(
+                'h-8 w-auto transition-opacity',
+                'lg:hidden',
+                collapsed && 'lg:block',
+                !collapsed && 'lg:hidden'
+              )}
+            />
           </Link>
         </div>
         {!collapsed && (
@@ -103,6 +101,9 @@ export const AdminLayoutContent = ({ collapsed, onCollapseChange, location }: Ad
           const active = isActive(item.path);
           const Icon = item.icon;
           const label = t(item.labelKey);
+          let stateClass = 'text-text-muted hover:bg-border-main/5 hover:text-text-main';
+          if (active) stateClass = 'bg-primary/10 text-primary';
+          else if (item.disabled) stateClass = 'text-text-muted/40 cursor-not-allowed';
           const buttonContent = (
             <button
               onClick={() => {
@@ -111,11 +112,7 @@ export const AdminLayoutContent = ({ collapsed, onCollapseChange, location }: Ad
               disabled={item.disabled}
               className={cn(
                 'w-full flex items-center gap-4 px-3 py-3 rounded-xl transition-all group',
-                active
-                  ? 'bg-primary/10 text-primary'
-                  : item.disabled
-                  ? 'text-text-muted/40 cursor-not-allowed'
-                  : 'text-text-muted hover:bg-border-main/5 hover:text-text-main',
+                stateClass,
                 collapsed && 'justify-center'
               )}
               aria-current={active ? 'page' : undefined}
@@ -207,6 +204,9 @@ export const AdminLayoutContent = ({ collapsed, onCollapseChange, location }: Ad
                 const active = isActive(item.path);
                 const Icon = item.icon;
                 const label = t(item.labelKey);
+                let stateClass = 'text-text-muted hover:bg-border-main/5 hover:text-text-main';
+                if (active) stateClass = 'bg-primary/10 text-primary';
+                else if (item.disabled) stateClass = 'text-text-muted/40 cursor-not-allowed';
                 return (
                   <button
                     key={item.id}
@@ -217,11 +217,7 @@ export const AdminLayoutContent = ({ collapsed, onCollapseChange, location }: Ad
                     disabled={item.disabled}
                     className={cn(
                       'w-full flex items-center gap-4 px-3 py-3 rounded-xl transition-all group',
-                      active
-                        ? 'bg-primary/10 text-primary'
-                        : item.disabled
-                        ? 'text-text-muted/40 cursor-not-allowed'
-                        : 'text-text-muted hover:bg-border-main/5 hover:text-text-main'
+                      stateClass
                     )}
                     aria-current={active ? 'page' : undefined}
                     aria-disabled={item.disabled}

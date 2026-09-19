@@ -1,4 +1,4 @@
-import { createContext, useContext, useEffect, useCallback } from 'react';
+import { createContext, useContext, useEffect, useCallback, useMemo } from 'react';
 import { useAppDispatch, useAppSelector } from '@redux/hooks';
 import {
   loginUser as loginUserAction,
@@ -75,19 +75,22 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
     [dispatch]
   );
 
+  const providerValue = useMemo(
+    () => ({
+      currentUser: user,
+      login,
+      updateProfile,
+      changePassword,
+      setCurrentUser,
+      logout,
+      token,
+      isLoading,
+    }),
+    [user, login, updateProfile, changePassword, setCurrentUser, logout, token, isLoading]
+  );
+
   return (
-    <AuthContext.Provider
-      value={{
-        currentUser: user,
-        login,
-        updateProfile,
-        changePassword,
-        setCurrentUser,
-        logout,
-        token,
-        isLoading,
-      }}
-    >
+    <AuthContext.Provider value={providerValue}>
       {children}
     </AuthContext.Provider>
   );

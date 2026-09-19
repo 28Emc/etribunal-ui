@@ -2,6 +2,8 @@ import { useState, useEffect, useCallback, useRef } from 'react';
 import { apiClient, authStorage } from '@api/client';
 import { useDebounce } from './useDebounce';
 
+export type SearchType = 'ALL' | 'CASES' | 'USERS';
+
 export interface UserSearchResult {
   id: string;
   username: string;
@@ -45,14 +47,14 @@ export interface SearchResults {
 interface UseSearchOptions {
   minChars?: number;
   debounceMs?: number;
-  defaultType?: 'ALL' | 'CASES' | 'USERS';
+  defaultType?: SearchType;
 }
 
 interface UseSearchReturn {
   query: string;
   setQuery: (q: string) => void;
-  searchType: 'ALL' | 'CASES' | 'USERS';
-  setSearchType: (t: 'ALL' | 'CASES' | 'USERS') => void;
+  searchType: SearchType;
+  setSearchType: (t: SearchType) => void;
   results: SearchResults;
   isSearching: boolean;
   hasSearched: boolean;
@@ -66,7 +68,7 @@ export function useSearch(options: UseSearchOptions = {}): UseSearchReturn {
   const { minChars = 2, debounceMs = 500, defaultType = 'ALL' } = options;
 
   const [query, setQuery] = useState("");
-  const [searchType, setSearchType] = useState<'ALL' | 'CASES' | 'USERS'>(defaultType);
+  const [searchType, setSearchType] = useState<SearchType>(defaultType);
   const [results, setResults] = useState<SearchResults>({ users: [], cases: [], hasMore: false });
   const [isSearching, setIsSearching] = useState(false);
   const [hasSearched, setHasSearched] = useState(false);
@@ -103,7 +105,7 @@ export function useSearch(options: UseSearchOptions = {}): UseSearchReturn {
     }
   }, [fetchFollowing]);
 
-  const performSearch = useCallback(async (searchQuery: string, type: 'ALL' | 'CASES' | 'USERS') => {
+  const performSearch = useCallback(async (searchQuery: string, type: SearchType) => {
     if (searchQuery.trim().length < minChars) {
       if (searchQuery.trim().length === 0) {
         fetchFollowing();

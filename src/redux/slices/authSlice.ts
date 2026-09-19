@@ -109,9 +109,7 @@ export const initializeAuth = createAsyncThunk(
           language: socialLanguage,
         };
 
-        if (urlToken) {
-          authStorage.setTokens(urlToken, refreshToken || undefined);
-        }
+        authStorage.setTokens(urlToken, refreshToken || undefined);
 
         // Persistir y limpiar URL
         localStorage.setItem(
@@ -186,7 +184,7 @@ export const initializeAuth = createAsyncThunk(
       }
 
       return { user: null };
-    } catch (error) {
+    } catch {
       return rejectWithValue('Failed to initialize auth');
     }
   }
@@ -280,7 +278,7 @@ export const updateProfile = createAsyncThunk(
         JSON.stringify(updatedMappedUser)
       );
       return updatedMappedUser;
-    } catch (error) {
+    } catch {
       return rejectWithValue('Error updating profile');
     }
   }

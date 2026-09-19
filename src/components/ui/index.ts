@@ -9,6 +9,6 @@ export { RelativeTime } from './RelativeTime';
 export { LoadingState, EmptyState, ErrorState, LoadingSkeleton } from './LoadingState';
 export { ConfirmModal } from './ConfirmModal';
 export { UserCard } from './UserCard';
-export { SEO } from './SEO';
+export { Seo } from './SEO';
 export { ReactionIcon, getReactionColor, getReactionBgColor, getReactionBorderColor } from './ReactionIcon';
 export type { ReactionType } from './ReactionIcon';

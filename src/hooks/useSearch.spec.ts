@@ -168,7 +168,7 @@ describe('useSearch', () => {
 
   it('debería limpiar AbortController al desmontar', () => {
     const { unmount } = renderHook(() => useSearch());
-    unmount();
+    expect(() => unmount()).not.toThrow();
   });
 
   it('search() no debería ejecutarse si query < minChars', () => {

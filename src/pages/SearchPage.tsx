@@ -4,7 +4,15 @@ import { useTranslation } from 'react-i18next';
 import { Search, User as UserIcon, Gavel, Loader2 } from 'lucide-react';
 import { useSearch, type CaseSearchResult } from '@hooks/useSearch';
 import { cn, formatNumber, getCasePath } from '@utils/helpers';
-import { getDisplayName, getAnonymousAvatar } from '@services/anonymity';
+import { getAnonymousAvatar } from '@services/anonymity';
+
+type SearchTab = 'ALL' | 'CASES' | 'USERS';
+
+function getTabLabelKey(tab: SearchTab): string {
+  if (tab === 'ALL') return 'search.all';
+  if (tab === 'CASES') return 'search.cases';
+  return 'search.judges';
+}
 
 export function SearchPage() {
   const { t } = useTranslation();
@@ -14,7 +22,7 @@ export function SearchPage() {
 
   const search = useSearch({ minChars: 2, debounceMs: 300 });
 
-  const [activeTab, setActiveTab] = useState<'ALL' | 'CASES' | 'USERS'>('ALL');
+  const [activeTab, setActiveTab] = useState<SearchTab>('ALL');
   const hasInitialized = useRef(false);
 
   useEffect(() => {
@@ -27,7 +35,7 @@ export function SearchPage() {
     }
   }, [initialQuery, search]);
 
-  const handleTabChange = (tab: 'ALL' | 'CASES' | 'USERS') => {
+  const handleTabChange = (tab: SearchTab) => {
     setActiveTab(tab);
   };
 
@@ -58,7 +66,7 @@ export function SearchPage() {
                     : "bg-transparent border-border-main/10 text-text-muted hover:bg-border-main/5 hover:text-text-main"
                 )}
               >
-                {tab === 'ALL' ? t('search.all') : tab === 'CASES' ? t('search.cases') : t('search.judges')}
+                {t(getTabLabelKey(tab))}
                 {tab !== 'ALL' && (
                   <span className="ml-2 text-xs opacity-70">
                     {tab === 'CASES' ? search.results.cases.length : search.results.users.length}
@@ -71,19 +79,21 @@ export function SearchPage() {
       </div>
 
       <div className="max-w-4xl mx-auto px-2 md:px-4 py-4 md:py-6">
-        {!initialQuery ? (
+        {!initialQuery && (
           <div className="text-center py-12">
             <Search className="w-16 h-16 text-text-muted/30 mx-auto mb-4" />
             <p className="text-text-muted font-medium">
               {t('search.emptyState')}
             </p>
           </div>
-        ) : search.isSearching ? (
+        )}
+        {initialQuery && search.isSearching && (
           <div className="text-center py-12">
             <Loader2 className="w-8 h-8 text-primary animate-spin mx-auto" />
             <p className="text-text-muted mt-4">{t('search.searching')}</p>
           </div>
-        ) : filteredUsers.length === 0 && filteredCases.length === 0 ? (
+        )}
+        {initialQuery && !search.isSearching && filteredUsers.length === 0 && filteredCases.length === 0 && (
           <div className="text-center py-12">
             <p className="text-text-muted font-medium">
               {t('search.noResultsFor', { query: search.query })}
@@ -92,7 +102,8 @@ export function SearchPage() {
               {t('search.noResultsHint')}
             </p>
           </div>
-        ) : (
+        )}
+        {initialQuery && !search.isSearching && (filteredUsers.length > 0 || filteredCases.length > 0) && (
           <div className="space-y-6">
             {filteredCases.length > 0 && (
               <div className="space-y-3">

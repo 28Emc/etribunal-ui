@@ -1,12 +1,12 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, type SyntheticEvent } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { motion, AnimatePresence } from 'motion/react';
-import { Mail, Gavel, ArrowLeft, Loader2, CheckCircle, X, AlertCircle } from 'lucide-react';
+import { Mail, Gavel, ArrowLeft, CheckCircle, X } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 import { apiClient } from '@api/client';
 import { cn } from '@utils/helpers';
 
-function Countdown({ seconds = 3 }: { seconds?: number }) {
+function Countdown({ seconds = 3 }: Readonly<{ seconds?: number }>) {
   const [count, setCount] = useState(seconds);
 
   useEffect(() => {
@@ -21,7 +21,7 @@ interface ForgotPasswordProps {
   onBackToLogin?: () => void;
 }
 
-export function ForgotPassword({ onBackToLogin }: ForgotPasswordProps) {
+export function ForgotPassword({ onBackToLogin }: Readonly<ForgotPasswordProps>) {
   const navigate = useNavigate();
   const { t, i18n } = useTranslation();
   const [email, setEmail] = useState('');
@@ -31,7 +31,7 @@ export function ForgotPassword({ onBackToLogin }: ForgotPasswordProps) {
 
   const validateEmail = (value: string): string => {
     if (!value) return t('auth.emailRequired');
-    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    const emailRegex = /^[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\.[A-Za-z]{2,}$/;
     if (!emailRegex.test(value)) return t('auth.validEmail');
     return '';
   };
@@ -45,7 +45,7 @@ export function ForgotPassword({ onBackToLogin }: ForgotPasswordProps) {
     }
   };
 
-  const handleSubmit = async (e: React.FormEvent) => {
+  const handleSubmit = async (e: SyntheticEvent<HTMLFormElement>) => {
     e.preventDefault();
     setError('');
 

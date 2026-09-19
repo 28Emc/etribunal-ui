@@ -58,7 +58,7 @@ vi.mock('@utils/helpers', () => ({
 }));
 
 vi.mock('@components/ui/SEO', () => ({
-  SEO: () => null,
+  Seo: () => null,
 }));
 
 vi.mock('@layout/PageLayout', () => ({

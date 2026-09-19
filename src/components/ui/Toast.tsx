@@ -1,4 +1,4 @@
-import { createContext, useContext, useState, useCallback, type ReactNode, type JSX } from 'react';
+import { createContext, useContext, useState, useCallback, useMemo, type ReactNode, type JSX } from 'react';
 import { X, CheckCircle, AlertCircle, Info, AlertTriangle } from 'lucide-react';
 
 export type ToastType = 'success' | 'error' | 'info' | 'warning';
@@ -29,7 +29,7 @@ interface ToastProviderProps {
   children: ReactNode;
 }
 
-export function ToastProvider({ children }: ToastProviderProps): JSX.Element {
+export function ToastProvider({ children }: Readonly<ToastProviderProps>): JSX.Element {
   const [toasts, setToasts] = useState<Toast[]>([]);
 
   const addToast = useCallback((type: ToastType, message: string) => {
@@ -45,8 +45,13 @@ export function ToastProvider({ children }: ToastProviderProps): JSX.Element {
     setToasts((prev) => prev.filter((t) => t.id !== id));
   }, []);
 
+  const providerValue = useMemo(
+    () => ({ toasts, addToast, removeToast }),
+    [toasts, addToast, removeToast]
+  );
+
   return (
-    <ToastContext.Provider value={{ toasts, addToast, removeToast }}>
+    <ToastContext.Provider value={providerValue}>
       {children}
       <ToastContainer toasts={toasts} onRemove={removeToast} />
     </ToastContext.Provider>
@@ -58,7 +63,7 @@ interface ToastContainerProps {
   onRemove: (id: string) => void;
 }
 
-function ToastContainer({ toasts, onRemove }: ToastContainerProps): JSX.Element | null {
+function ToastContainer({ toasts, onRemove }: Readonly<ToastContainerProps>): JSX.Element | null {
   if (toasts.length === 0) return null;
 
   return (
@@ -75,7 +80,7 @@ interface ToastItemProps {
   onRemove: (id: string) => void;
 }
 
-function ToastItem({ toast, onRemove }: ToastItemProps): JSX.Element {
+function ToastItem({ toast, onRemove }: Readonly<ToastItemProps>): JSX.Element {
   const icons = {
     success: <CheckCircle className="w-5 h-5 text-green-500" />,
     error: <AlertCircle className="w-5 h-5 text-red-500" />,

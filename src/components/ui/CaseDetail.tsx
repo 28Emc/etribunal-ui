@@ -94,11 +94,9 @@ export const CaseDetail: React.FC<CaseDetailProps> = ({
   const {
     translateCase: translateCaseContent,
     showOriginal,
-    showTranslated: showCaseTranslated,
     isTranslating: isCaseTranslating,
     translatedCase,
     showTranslation: showCaseTranslation,
-    setTranslatedCase,
   } = useContentTranslation();
 
   const currentLocale = i18n.language?.split('-')[0] || 'es';
@@ -109,7 +107,6 @@ export const CaseDetail: React.FC<CaseDetailProps> = ({
   const isCurrentUserSideA = !!currentUser && !!caseData?.sideAUserId && currentUser.id === caseData.sideAUserId;
   const isCurrentUserSideB = !!currentUser && !!caseData?.sideBUserId && currentUser.id === caseData.sideBUserId;
   const canManageInvite = isCurrentUserSideA && isSideBWaiting;
-  const isSaved = caseData?.isSaved || false;
 
   const { totalVotes, percentA, percentB, percentBoth, winner } = calculateVotePercentages(
     caseData?.votesA || 0,
@@ -153,6 +150,37 @@ export const CaseDetail: React.FC<CaseDetailProps> = ({
     caseData?.userVote ?? currentUser?.votes?.[caseData?.id || ''];
   const hasVoted = !!userVote;
 
+  let winnerText = t('cases.itsATie');
+  if (winner === 'A') {
+    winnerText = `${caseData?.sideA.name || ''} ${t('cases.wins')}`;
+  } else if (winner === 'B') {
+    winnerText = `${caseData?.sideB.name || ''} ${t('cases.wins')}`;
+  }
+
+  let votedForName = caseData?.sideB.name || '';
+  if (userVote === 'BOTH_WRONG') {
+    votedForName = t('cases.bothWrong');
+  } else if (userVote === 'A') {
+    votedForName = caseData?.sideA.name || '';
+  }
+
+  let inviteButtonContent: React.ReactNode = (
+    <>
+      <LinkIcon className="w-4 h-4" />
+      {t('cases.viewInviteLink')}
+    </>
+  );
+  if (isRegeneratingInvite) {
+    inviteButtonContent = <Loader2 className="w-4 h-4 animate-spin" />;
+  } else if (inviteLinkPreview) {
+    inviteButtonContent = (
+      <>
+        <Check className="w-4 h-4" />
+        {t('cases.linkReady')}
+      </>
+    );
+  }
+
   const canCastVote = !hasVoted && !isCurrentUserSideA && !isCurrentUserSideB;
 
   const handleVoteClick = (side: 'A' | 'B' | 'BothWrong') => {
@@ -174,7 +202,7 @@ export const CaseDetail: React.FC<CaseDetailProps> = ({
     if (!commentText.trim() || !caseData) return;
     const parentId = replyingTo || undefined;
     if (parentId) setJustRepliedTo(parentId);
-    await onAddComment(caseData.id, commentText, parentId);
+    onAddComment(caseData.id, commentText, parentId);
     setCommentText('');
     setReplyingTo(null);
   };
@@ -205,7 +233,7 @@ export const CaseDetail: React.FC<CaseDetailProps> = ({
   };
 
   const handleConfirmDelete = () => {
-    if (commentToDelete && onDeleteComment && caseData && caseData.id) {
+    if (commentToDelete && onDeleteComment && caseData?.id) {
       onDeleteComment(caseData.id, commentToDelete);
     }
     setShowDeleteConfirm(false);
@@ -254,7 +282,7 @@ export const CaseDetail: React.FC<CaseDetailProps> = ({
     window.setTimeout(() => setCopiedInvite(false), 2000);
   };
 
-  if (!caseData || !caseData.sideA || !caseData.sideB) {
+  if (!caseData?.sideA || !caseData.sideB) {
     return (
       <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm">
         <div className="animate-spin w-8 h-8 border-4 border-primary border-t-transparent rounded-full" />
@@ -284,8 +312,8 @@ export const CaseDetail: React.FC<CaseDetailProps> = ({
             {/* Title */}
             <div className="space-y-4 text-center">
               <div className="flex justify-center flex-wrap gap-2">
-                {caseData.tags?.map((tag, idx) => (
-                  <span key={idx} className="text-[10px] font-black uppercase tracking-widest bg-border-main/5 text-text-muted px-3 py-1 rounded-full border border-border-main/10">
+                {caseData.tags?.map((tag) => (
+                  <span key={tag} className="text-[10px] font-black uppercase tracking-widest bg-border-main/5 text-text-muted px-3 py-1 rounded-full border border-border-main/10">
                     {tag}
                   </span>
                 ))}
@@ -415,19 +443,7 @@ export const CaseDetail: React.FC<CaseDetailProps> = ({
                                   : "bg-secondary text-white hover:brightness-110"
                               )}
                             >
-                              {isRegeneratingInvite ? (
-                                <Loader2 className="w-4 h-4 animate-spin" />
-                              ) : inviteLinkPreview ? (
-                                <>
-                                  <Check className="w-4 h-4" />
-                                  {t('cases.linkReady')}
-                                </>
-                              ) : (
-                                <>
-                                  <LinkIcon className="w-4 h-4" />
-                                  {t('cases.viewInviteLink')}
-                                </>
-                              )}
+                              {inviteButtonContent}
                             </button>
                           </div>
                         ) : (
@@ -460,12 +476,12 @@ export const CaseDetail: React.FC<CaseDetailProps> = ({
 
                           {responseImages.length > 0 && (
                             <div className="flex gap-2 overflow-x-auto no-scrollbar pb-2">
-                              {responseImages.map((img, idx) => (
-                                <div key={idx} className="relative min-w-[80px] h-20 rounded-xl overflow-hidden border border-border-main/10">
+                              {responseImages.map((img) => (
+                                <div key={img} className="relative min-w-[80px] h-20 rounded-xl overflow-hidden border border-border-main/10">
                                   <img src={img} alt="" className="w-full h-full object-cover" referrerPolicy="no-referrer" />
                                   <Tooltip content={t('tooltips.removeImage')}>
                                     <button
-                                      onClick={() => setResponseImages(prev => prev.filter((_, i) => i !== idx))}
+                                      onClick={() => setResponseImages(prev => prev.filter((u) => u !== img))}
                                       className="absolute top-1 right-1 w-5 h-5 bg-black/50 rounded-full flex items-center justify-center"
                                     >
                                       <X className="w-3 h-3 text-white" />
@@ -529,7 +545,6 @@ export const CaseDetail: React.FC<CaseDetailProps> = ({
                       <button 
                         onClick={() => handleVoteClick('A')}
                         disabled={isVoting || !canCastVote}
-                        role="button"
                         aria-label={`Votar por ${caseData.sideA.name}`}
                         className="flex items-center justify-between gap-2 px-3 py-2 min-h-[44px] rounded-2xl bg-primary/10 border border-primary/50 hover:bg-primary/20 active:bg-primary/30 transition-all disabled:opacity-40 disabled:cursor-not-allowed overflow-hidden shadow-[0_0_10px_rgba(51,102,153,0.25)]"
                       >
@@ -547,7 +562,6 @@ export const CaseDetail: React.FC<CaseDetailProps> = ({
                       <button 
                         onClick={() => handleVoteClick('BothWrong')}
                         disabled={isVoting || !canCastVote}
-                        role="button"
                         aria-label="Votar porque ambos están equivocados"
                         className="flex items-center justify-between gap-2 px-3 py-2 min-h-[44px] rounded-2xl bg-border-main/10 border border-border-main/90 hover:bg-border-main/20 active:bg-border-main/30 transition-all disabled:opacity-40 disabled:cursor-not-allowed overflow-hidden shadow-[0_0_10px_rgba(0,0,0,0.15)]"
                       >
@@ -565,7 +579,6 @@ export const CaseDetail: React.FC<CaseDetailProps> = ({
                       <button 
                         onClick={() => handleVoteClick('B')}
                         disabled={isVoting || !canCastVote}
-                        role="button"
                         aria-label={`Votar por ${caseData.sideB.name}`}
                         className="flex items-center justify-between gap-2 px-3 py-2 min-h-[44px] rounded-2xl bg-secondary/10 border border-secondary/50 hover:bg-secondary/20 active:bg-secondary/30 transition-all disabled:opacity-40 disabled:cursor-not-allowed overflow-hidden shadow-[0_0_10px_rgba(255,102,0,0.25)]"
                       >
@@ -593,7 +606,7 @@ export const CaseDetail: React.FC<CaseDetailProps> = ({
                           <span className="text-[10px] font-black uppercase tracking-widest text-primary">{t('cases.verdictReached')}</span>
                         </div>
                         <h3 className="text-xl lg:text-2xl font-black italic uppercase tracking-tighter">
-                          {winner === 'A' ? `${caseData.sideA.name} ${t('cases.wins')}` : winner === 'B' ? `${caseData.sideB.name} ${t('cases.wins')}` : t('cases.itsATie')}
+                          {winnerText}
                         </h3>
                       </div>
                     )}
@@ -652,7 +665,7 @@ export const CaseDetail: React.FC<CaseDetailProps> = ({
                     {userVote && (
                       <p className="text-center text-[10px] font-bold text-text-muted uppercase tracking-[0.2em]">
                         {t('cases.youVotedFor', {
-                          name: userVote === 'BOTH_WRONG' ? t('cases.bothWrong') : userVote === 'A' ? caseData.sideA.name : caseData.sideB.name
+                          name: votedForName
                         })}
                       </p>
                     )}

@@ -87,19 +87,13 @@ describe('Comment', () => {
     mockUseContentTranslation.mockReturnValue({ ...defaultTranslationReturn });
   });
 
-  it('debería renderizar el texto del comentario', () => {
-    render(<Comment {...defaultProps} />);
-    expect(screen.getByText('Este es un comentario de prueba')).toBeInTheDocument();
-  });
-
-  it('debería renderizar el username', () => {
-    render(<Comment {...defaultProps} />);
-    expect(screen.getByText('testuser')).toBeInTheDocument();
-  });
-
-  it('debería renderizar el badge isOwner', () => {
-    render(<Comment {...defaultProps} comment={{ ...baseComment, isOwner: true }} />);
-    expect(screen.getByText('cases.you')).toBeInTheDocument();
+  it.each([
+    { name: 'debería renderizar el texto del comentario', props: defaultProps, expected: 'Este es un comentario de prueba' },
+    { name: 'debería renderizar el username', props: defaultProps, expected: 'testuser' },
+    { name: 'debería renderizar el badge isOwner', props: { ...defaultProps, comment: { ...baseComment, isOwner: true } }, expected: 'cases.you' },
+  ])('$name', ({ props, expected }) => {
+    render(<Comment {...props} />);
+    expect(screen.getByText(expected)).toBeInTheDocument();
   });
 
   it('NO debería renderizar badge isOwner si no es owner', () => {

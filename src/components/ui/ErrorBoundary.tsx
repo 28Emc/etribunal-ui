@@ -75,7 +75,7 @@ interface ModalErrorBoundaryProps {
   onClose?: () => void;
 }
 
-export function ModalErrorBoundary({ children, onClose }: ModalErrorBoundaryProps) {
+export function ModalErrorBoundary({ children, onClose }: Readonly<ModalErrorBoundaryProps>) {
   return (
     <ErrorBoundary
       fallback={

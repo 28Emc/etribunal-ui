@@ -9,7 +9,7 @@ import { useAuth } from '@context/AuthContext';
 import { apiClient } from '@api/client';
 import { Tooltip } from '@components/ui/Tooltip';
 import { PageLayout } from '@layout/PageLayout';
-import { SEO } from '@components/ui/SEO';
+import { Seo } from '@components/ui/SEO';
 import { getAnonymousAvatar } from '@services/anonymity';
 import { useAppDispatch } from '@redux/hooks';
 import { prependCaseToFeed, useCreateCaseMutation } from '@redux/services/casesApi';
@@ -211,7 +211,7 @@ export function CreateCasePage() {
 
   return (
     <PageLayout title={t('cases.newCase')}>
-      <SEO title={t('cases.createCase')} />
+      <Seo title={t('cases.createCase')} />
       <div className="flex-1 max-w-3xl mx-auto w-full px-3 md:px-4 py-6 space-y-10 pb-10 bg-card/50 rounded-[32px] border border-border-main/5">
         {!shareLink ? (
           <form onSubmit={handleSubmit} className="space-y-10" noValidate>

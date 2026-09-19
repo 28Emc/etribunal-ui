@@ -92,7 +92,7 @@ describe('ReactionBar', () => {
       <ReactionBar targetId="case-1" reactions={{ LIKE: 0, LOVE: 0, ANGRY: 0 }} onReaction={mockOnReaction} />
     );
     const icons = screen.queryAllByTestId('reaction-icon');
-    expect(icons.length).toBe(0);
+    expect(icons).toHaveLength(0);
   });
 
   it('debería ocultar contador cuando total es 0', () => {
@@ -204,6 +204,7 @@ describe('ReactionBar', () => {
     fireEvent.pointerDown(mainBtn, { pointerType: 'touch', pointerId: 1 });
     fireEvent.pointerUp(mainBtn, { pointerType: 'touch', pointerId: 1 });
     vi.advanceTimersByTime(250);
+    expect(mockOnReaction).not.toHaveBeenCalled();
     vi.useRealTimers();
   });
 
@@ -216,6 +217,7 @@ describe('ReactionBar', () => {
     fireEvent.pointerDown(parentDiv.firstChild as HTMLElement, { pointerType: 'touch', pointerId: 5 });
     fireEvent.mouseEnter(parentDiv);
     act(() => { vi.advanceTimersByTime(500); });
+    expect(mockOnReaction).not.toHaveBeenCalled();
     vi.useRealTimers();
   });
 
@@ -229,14 +231,16 @@ describe('ReactionBar', () => {
     fireEvent.pointerDown(countsDiv.firstChild as HTMLElement, { pointerType: 'touch', pointerId: 6 });
     fireEvent.mouseEnter(countsDiv);
     act(() => { vi.advanceTimersByTime(50); });
+    expect(screen.queryByText('5')).not.toBeInTheDocument();
     vi.useRealTimers();
   });
 
   it('debería ejecutar scroll handler cleanup on unmount', () => {
-    const { unmount } = render(
+    const { unmount, container } = render(
       <ReactionBar targetId="case-1" reactions={baseReactions} onReaction={mockOnReaction} />
     );
     unmount();
+    expect(container).toBeEmptyDOMElement();
   });
 
   it('debería manejar múltiples reacciones con toggle on/off', () => {
@@ -269,7 +273,8 @@ describe('ReactionBar', () => {
     );
     const buttons = screen.getAllByRole('button');
     fireEvent.pointerDown(buttons[1], { pointerType: 'touch', pointerId: 2 });
-    act(() => { fireEvent.click(buttons[1]); });
+    fireEvent.click(buttons[1]);
+    expect(mockOnReaction).not.toHaveBeenCalled();
   });
 
   it('userReaction LIKE debería aplicar estilos de LIKE activo', () => {
@@ -297,7 +302,7 @@ describe('ReactionBar', () => {
     const tooltips = screen.getAllByTestId('tooltip');
     expect(tooltips.length).toBeGreaterThanOrEqual(3);
     fireEvent.scroll(window);
-    expect(screen.queryAllByTestId('tooltip').length).toBe(0);
+    expect(screen.queryAllByTestId('tooltip')).toHaveLength(0);
     vi.useRealTimers();
   });
 
@@ -309,7 +314,7 @@ describe('ReactionBar', () => {
     fireEvent.pointerDown(mainBtn, { pointerType: 'touch', pointerId: 1 });
     fireEvent.pointerLeave(mainBtn, { pointerType: 'touch', pointerId: 1 });
     act(() => { vi.advanceTimersByTime(250); });
-    expect(screen.queryAllByTestId('tooltip').length).toBe(0);
+    expect(screen.queryAllByTestId('tooltip')).toHaveLength(0);
     vi.useRealTimers();
   });
 
@@ -321,7 +326,7 @@ describe('ReactionBar', () => {
     fireEvent.pointerDown(mainBtn, { pointerType: 'touch', pointerId: 1 });
     fireEvent.pointerUp(mainBtn, { pointerType: 'touch', pointerId: 1 });
     act(() => { vi.advanceTimersByTime(250); });
-    expect(screen.queryAllByTestId('tooltip').length).toBe(0);
+    expect(screen.queryAllByTestId('tooltip')).toHaveLength(0);
     vi.useRealTimers();
   });
 
@@ -336,7 +341,7 @@ describe('ReactionBar', () => {
     const popupButtons = screen.getAllByRole('button');
     fireEvent.click(popupButtons[1]);
     expect(mockOnReaction).toHaveBeenCalledWith('LIKE');
-    expect(screen.queryAllByTestId('tooltip').length).toBe(0);
+    expect(screen.queryAllByTestId('tooltip')).toHaveLength(0);
     vi.useRealTimers();
   });
 
@@ -353,7 +358,7 @@ describe('ReactionBar', () => {
       fireEvent.mouseLeave(parentDiv);
       vi.advanceTimersByTime(200);
     });
-    expect(screen.queryAllByTestId('tooltip').length).toBe(0);
+    expect(screen.queryAllByTestId('tooltip')).toHaveLength(0);
     vi.useRealTimers();
   });
 
@@ -466,6 +471,7 @@ describe('ReactionBar', () => {
       <ReactionBar targetId="case-1" reactions={baseReactions} onReaction={mockOnReaction} />
     );
     fireEvent.pointerUp(screen.getAllByRole('button')[0]);
+    expect(mockOnReaction).not.toHaveBeenCalled();
   });
 
   it('non-touch pointerDown en counts no debería hacer nada', () => {
@@ -473,6 +479,7 @@ describe('ReactionBar', () => {
       <ReactionBar targetId="case-1" reactions={baseReactions} onReaction={mockOnReaction} />
     );
     fireEvent.pointerDown(screen.getAllByRole('button')[1]);
+    expect(mockOnReaction).not.toHaveBeenCalled();
   });
 
   it('non-touch pointerDown no debería iniciar timer', () => {
@@ -480,6 +487,7 @@ describe('ReactionBar', () => {
       <ReactionBar targetId="case-1" reactions={baseReactions} onReaction={mockOnReaction} />
     );
     fireEvent.pointerDown(screen.getAllByRole('button')[0]);
+    expect(mockOnReaction).not.toHaveBeenCalled();
   });
 
   it('non-touch pointerLeave no debería hacer nada', () => {
@@ -487,6 +495,7 @@ describe('ReactionBar', () => {
       <ReactionBar targetId="case-1" reactions={baseReactions} onReaction={mockOnReaction} />
     );
     fireEvent.pointerLeave(screen.getAllByRole('button')[0]);
+    expect(mockOnReaction).not.toHaveBeenCalled();
   });
 
   it('click en counts button en desktop no debería abrir popup', () => {
@@ -504,6 +513,7 @@ describe('ReactionBar', () => {
     );
     fireEvent.pointerDown(screen.getAllByRole('button')[0], { pointerType: 'touch', pointerId: 1 });
     act(() => { vi.advanceTimersByTime(600); });
+    expect(mockOnReaction).not.toHaveBeenCalled();
     vi.useRealTimers();
   });
 
@@ -533,6 +543,7 @@ describe('ReactionBar', () => {
       <ReactionBar targetId="case-1" reactions={{ LIKE: 0, LOVE: 0, ANGRY: 0 }} onReaction={mockOnReaction} />
     );
     act(() => { vi.advanceTimersByTime(50); });
+    expect(screen.getAllByRole('button').length).toBeGreaterThan(0);
     vi.useRealTimers();
   });
 

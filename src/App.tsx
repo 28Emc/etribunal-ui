@@ -27,43 +27,38 @@ import { AppRoutes } from '@routing/index';
 import { store } from '@redux/store';
 import { apiClient } from '@api/client';
 
+type ShareTarget = { id: string; type: 'case' | 'user' } | null;
+
+function getShareTarget(pathname: string): ShareTarget {
+  if (pathname.startsWith('/cases/')) {
+    const segments = pathname.split('/');
+    if (segments.length >= 3) return { id: segments[2], type: 'case' };
+  } else if (pathname.startsWith('/users/')) {
+    const segments = pathname.split('/');
+    if (segments.length >= 3) return { id: segments[2], type: 'user' };
+  }
+  return null;
+}
+
 export default function App() {
   useEffect(() => {
     const url = new URL(window.location.href);
-    const utmSource = url.searchParams.get('utm_source');
-    if (utmSource === 'share') {
-      const pathname = url.pathname;
-      let id: string | null = null;
-      let type: 'case' | 'user' | null = null;
+    if (url.searchParams.get('utm_source') !== 'share') return;
 
-      if (pathname.startsWith('/cases/')) {
-        const segments = pathname.split('/');
-        if (segments.length >= 3) {
-          id = segments[2];
-          type = 'case';
-        }
-      } else if (pathname.startsWith('/users/')) {
-        const segments = pathname.split('/');
-        if (segments.length >= 3) {
-          id = segments[2];
-          type = 'user';
-        }
-      }
+    const target = getShareTarget(url.pathname);
+    if (!target) return;
 
-      if (id && type) {
-        const endpoint = type === 'case'
-          ? `/cases/${id}/track-share`
-          : `/users/${id}/track-share`;
+    const endpoint = target.type === 'case'
+      ? `/cases/${target.id}/track-share`
+      : `/users/${target.id}/track-share`;
 
-        apiClient.post(endpoint).catch(() => {
-          /* fire-and-forget */
-        });
+    apiClient.post(endpoint).catch(() => {
+      /* fire-and-forget */
+    });
 
-        url.searchParams.delete('utm_source');
-        url.searchParams.delete('utm_medium');
-        window.history.replaceState({}, '', url.toString());
-      }
-    }
+    url.searchParams.delete('utm_source');
+    url.searchParams.delete('utm_medium');
+    window.history.replaceState({}, '', url.toString());
   }, []);
 
   return (

@@ -2,7 +2,7 @@ import React from 'react';
 import { useTranslation } from 'react-i18next';
 import { ShieldCheck, Scale, AlertTriangle, Eye, MessageSquare } from 'lucide-react';
 import { PageLayout } from '@layout/PageLayout';
-import { SEO } from '@components/ui/SEO';
+import { Seo } from '@components/ui/SEO';
 
 export const TermsAndConditionsPage: React.FC = () => {
   const { t } = useTranslation();
@@ -41,7 +41,7 @@ export const TermsAndConditionsPage: React.FC = () => {
 
   return (
     <PageLayout title={t('legal.legal')}>
-      <SEO title={t('legal.terms')} />
+      <Seo title={t('legal.terms')} />
       <div className="flex-1 py-4 md:py-8 space-y-8 md:space-y-12 pb-32">
         <div className="space-y-3 md:space-y-4">
           <h2 className="text-2xl md:text-3xl font-black italic uppercase tracking-tighter leading-none text-text-main">
@@ -53,8 +53,8 @@ export const TermsAndConditionsPage: React.FC = () => {
         </div>
 
         <div className="space-y-10">
-          {sections.map((section, i) => (
-            <div key={i} className="space-y-4">
+          {sections.map((section) => (
+            <div key={section.titleKey} className="space-y-4">
               <div className="flex items-center gap-3">
                 <div className="w-8 h-8 rounded-xl bg-primary/10 flex items-center justify-center">
                   <section.icon className="w-4 h-4 text-primary" />

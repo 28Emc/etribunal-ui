@@ -68,10 +68,20 @@ const CaseCardComponent: React.FC<CaseCardProps> = ({
   const [isAnonymous, setIsAnonymous] = useState(globalAnon);
   const { addToast } = useToast();
   const { t } = useTranslation();
+  const reactionShieldRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    const shield = reactionShieldRef.current;
+    if (!shield) return;
+    const stopMouse = (e: Event) => e.stopPropagation();
+    shield.addEventListener('mousedown', stopMouse);
+    return () => {
+      shield.removeEventListener('mousedown', stopMouse);
+    };
+  }, []);
 
   const isVoting = isVotingThis;
   const isSaving = isSavingThis;
-  const isSharing = isSharingThis;
   const isReacting = isReactingThis;
 
   const commentsCountData = caseData.commentsCount || commentsCount || (caseData.comments?.length || 0);
@@ -106,7 +116,7 @@ const CaseCardComponent: React.FC<CaseCardProps> = ({
     try {
       await onVote?.(caseData.id, side);
       addToast('success', t('cases.votedStatus', { side: side === 'BothWrong' ? t('cases.bothWrong') : t('cases.side' + side) }));
-    } catch (error) {
+    } catch {
       addToast('error', t('errors.voteError'));
     }
   };
@@ -119,7 +129,7 @@ const CaseCardComponent: React.FC<CaseCardProps> = ({
     }
     try {
       await onToggleSave?.(caseData.id);
-    } catch (error) {
+    } catch {
       addToast('error', t('errors.saveError'));
     }
   };
@@ -136,7 +146,7 @@ const CaseCardComponent: React.FC<CaseCardProps> = ({
     }
     try {
       await onReaction?.(caseData.id, emoji);
-    } catch (error) {
+    } catch {
       addToast('error', t('errors.reactionError'));
     }
   };
@@ -148,7 +158,7 @@ const CaseCardComponent: React.FC<CaseCardProps> = ({
       await onAddComment?.(caseData.id, commentText, isAnonymous);
       setCommentText('');
       setShowComments(false);
-    } catch (error) {
+    } catch {
       addToast('error', t('errors.commentError'));
     } finally {
       setIsPostingComment(false);
@@ -163,13 +173,62 @@ const CaseCardComponent: React.FC<CaseCardProps> = ({
     }
   }, [showComments]);
 
+  const interactCount = caseData.type === 'vote' ? totalVotes : commentsCountData;
+
+  let votedForName = caseData.sideB.name;
+  if (userVote === 'BOTH_WRONG') {
+    votedForName = t('cases.bothWrong');
+  } else if (userVote === 'A') {
+    votedForName = caseData.sideA.name;
+  }
+
+  let joinVotingText = t('caseCard.joinDebateEmpty');
+  if (caseData.type === 'vote') {
+    joinVotingText = totalVotes > 0 ? t('caseCard.joinVoting') : t('caseCard.joinVotingEmpty');
+  } else if (commentsCountData > 0) {
+    joinVotingText = t('caseCard.joinDebate');
+  }
+
+  let evidenceContent: React.ReactNode = null;
+  if (caseData.type === 'classic') {
+    evidenceContent = (
+      <div className="relative h-full">
+        {sideAEvidence && (
+          <img src={sideAThumbnail} alt="" className="w-full h-full object-cover" referrerPolicy="no-referrer" />
+        )}
+      </div>
+    );
+  } else if (hasOneSideEvidence) {
+    evidenceContent = (
+      <div className="relative h-full">
+        {sideAEvidence ? (
+          <img src={sideAThumbnail} alt="" className="w-full h-full object-cover" loading="lazy" referrerPolicy="no-referrer" />
+        ) : (
+          <img src={sideBThumbnail} alt="" className="w-full h-full object-cover" referrerPolicy="no-referrer" />
+        )}
+      </div>
+    );
+  } else {
+    evidenceContent = (
+      <div className="grid grid-cols-2 h-full">
+        <div className="relative h-full">
+          <img src={sideAThumbnail} alt="" className="w-full h-full object-cover" loading="lazy" referrerPolicy="no-referrer" />
+        </div>
+        <div className="relative h-full">
+          <img src={sideBThumbnail} alt="" className="w-full h-full object-cover" referrerPolicy="no-referrer" />
+        </div>
+      </div>
+    );
+  }
+
   return (
     <motion.div
       transition={{ type: 'spring', stiffness: 260, damping: 22 }}
       className="w-full max-w-full bg-card rounded-[32px] overflow-hidden border border-border-main/5 shadow-[0_1px_3px_rgba(0,0,0,0.08)] mb-2 md:mb-3 flex flex-col box-border"
     >
-      <div className="p-3 md:p-4 pb-2 cursor-pointer" onClick={() => onOpenDetail(caseData)}>
-        <div className="flex flex-wrap gap-2 mb-3 items-center justify-between">
+      <div className="p-3 md:p-4 pb-2">
+        <button type="button" onClick={() => onOpenDetail(caseData)} className="w-full text-left cursor-pointer">
+          <div className="flex flex-wrap gap-2 mb-3 items-center justify-between">
           <div className="flex flex-wrap gap-2 items-center">
             {caseData.type === 'classic' ? (
               <span className="text-[10px] font-black uppercase tracking-widest bg-secondary/10 text-secondary px-2 py-1 rounded-full border border-secondary/20">
@@ -199,11 +258,12 @@ const CaseCardComponent: React.FC<CaseCardProps> = ({
             </span>
           </div>
         )}
+        </button>
 
         <div className="flex items-center mb-4 min-h-[32px]">
           {caseData.type === 'vote' ? (
             <div className="flex items-center w-full">
-              <div className="flex-1 flex items-center gap-2 cursor-pointer min-w-0" onClick={(e) => { e.stopPropagation(); !caseData.sideA.isAnonymous && onViewProfile?.(caseData.sideA.name); }}>
+              <button type="button" className="flex-1 flex items-center gap-2 cursor-pointer min-w-0 text-left" onClick={(e) => { e.stopPropagation(); !caseData.sideA.isAnonymous && onViewProfile?.(caseData.sideA.name); }}>
                 <img
                   src={caseData.sideA.avatar}
                   alt=""
@@ -212,9 +272,9 @@ const CaseCardComponent: React.FC<CaseCardProps> = ({
                   referrerPolicy="no-referrer"
                 />
                 <p className="text-[10px] font-black text-text-main uppercase tracking-tight truncate">{caseData.sideA.name}</p>
-              </div>
+              </button>
               <img src="/versus_color_nobg.png" alt="VS" className="w-24 h-24 object-contain shrink-0 z-10 relative drop-shadow-[0_0_6px_rgba(51,102,153,0.2)]" />
-              <div className="flex-1 flex items-center gap-2 cursor-pointer justify-end min-w-0" onClick={(e) => { e.stopPropagation(); caseData.sideB.name !== 'Waiting...' && !caseData.sideB.isAnonymous && onViewProfile?.(caseData.sideB.name); }}>
+              <button type="button" className="flex-1 flex items-center gap-2 cursor-pointer justify-end min-w-0 text-left" onClick={(e) => { e.stopPropagation(); caseData.sideB.name !== 'Waiting...' && !caseData.sideB.isAnonymous && onViewProfile?.(caseData.sideB.name); }}>
                 <p className={cn("text-[10px] font-black uppercase tracking-tight truncate", caseData.status === 'WAITING' ? "text-text-muted italic" : "text-text-main")}>
                   {caseData.status === 'WAITING' ? t('cases.awaitingSideB') : caseData.sideB.name}
                 </p>
@@ -225,10 +285,10 @@ const CaseCardComponent: React.FC<CaseCardProps> = ({
                   loading="lazy"
                   referrerPolicy="no-referrer"
                 />
-              </div>
+              </button>
             </div>
           ) : (
-            <div className="flex items-center gap-2 cursor-pointer" onClick={(e) => { e.stopPropagation(); !caseData.sideA.isAnonymous && onViewProfile?.(caseData.sideA.name); }}>
+            <button type="button" className="flex items-center gap-2 cursor-pointer text-left" onClick={(e) => { e.stopPropagation(); !caseData.sideA.isAnonymous && onViewProfile?.(caseData.sideA.name); }}>
               <img
                 src={caseData.sideA.avatar}
                 alt=""
@@ -237,10 +297,11 @@ const CaseCardComponent: React.FC<CaseCardProps> = ({
                 referrerPolicy="no-referrer"
               />
               <p className="text-[10px] font-black text-text-main uppercase tracking-tight">{caseData.sideA.name}</p>
-            </div>
+            </button>
           )}
         </div>
 
+        <button type="button" onClick={() => onOpenDetail(caseData)} className="w-full text-left cursor-pointer">
         <h2 className="text-sm md:text-base font-black uppercase leading-tight tracking-tight mb-1 text-text-main">
           {caseData.title}
         </h2>
@@ -257,68 +318,39 @@ const CaseCardComponent: React.FC<CaseCardProps> = ({
               <span className="text-[14px]">🗣️</span>
             </div>
             <span className="text-[10px] font-medium text-text-muted">
-              {caseData.type === 'vote' ? (totalVotes > 0 ? t('caseCard.joinVoting') : t('caseCard.joinVotingEmpty')) : (commentsCountData > 0 ? t('caseCard.joinDebate') : t('caseCard.joinDebateEmpty'))}
+              {joinVotingText}
             </span>
           </div>
-          {(caseData.type === 'vote' ? totalVotes : commentsCountData) > 0 && (
+          {interactCount > 0 && (
             <div className="flex items-center gap-1.5">
               <div className="w-7 h-7 rounded-full bg-primary border border-card flex items-center justify-center">
                 <span className="text-[11px] font-bold text-white">
-                  +{formatNumber(caseData.type === 'vote' ? totalVotes : commentsCountData)}
+                  +{formatNumber(interactCount)}
                 </span>
               </div>
             </div>
           )}
         </div>
+        </button>
       </div>
 
       {!hasNoEvidence && (
-        <div
-          className="border-y border-border-main/10 overflow-hidden cursor-pointer relative h-[200px] md:h-[280px] lg:h-[320px]"
+        <button
+          type="button"
+          className="block w-full text-left border-y border-border-main/10 overflow-hidden cursor-pointer relative h-[200px] md:h-[280px] lg:h-[320px]"
           onClick={() => onOpenDetail(caseData)}
         >
-          {caseData.type === 'classic' ? (
-            <div className="relative h-full">
-              {sideAEvidence && (
-                <>
-                  <img src={sideAThumbnail} alt="" className="w-full h-full object-cover" referrerPolicy="no-referrer" />
-                </>
-              )}
-            </div>
-          ) : hasOneSideEvidence ? (
-            <div className="relative h-full">
-              {sideAEvidence ? (
-                <>
-                  <img src={sideAThumbnail} alt="" className="w-full h-full object-cover" loading="lazy" referrerPolicy="no-referrer" />
-                </>
-              ) : (
-                <>
-                  <img src={sideBThumbnail} alt="" className="w-full h-full object-cover" referrerPolicy="no-referrer" />
-                </>
-              )}
-            </div>
-          ) : (
-            <div className="grid grid-cols-2 h-full">
-              <div className="relative h-full">
-                <img src={sideAThumbnail} alt="" className="w-full h-full object-cover" loading="lazy" referrerPolicy="no-referrer" />
-              </div>
-              <div className="relative h-full">
-                <img src={sideBThumbnail} alt="" className="w-full h-full object-cover" referrerPolicy="no-referrer" />
-              </div>
-            </div>
-          )}
-        </div>
+          {evidenceContent}
+        </button>
       )}
 
       <div className="p-4 space-y-4">
-        {caseData.type !== 'classic' && caseData.sideB.name !== 'Waiting...' && (
-          (!userVote && !isSideAOwner && !isSideBOwner) ? (
+        {caseData.type !== 'classic' && caseData.sideB.name !== 'Waiting...' && !userVote && !isSideAOwner && !isSideBOwner && (
             canVote ? (
               <div className="grid grid-cols-1 md:grid-cols-3 gap-2">
                 <button
                   onClick={(e) => { e.stopPropagation(); handleVote('A'); }}
                   disabled={isVoting || !canVote}
-                  role="button"
                   aria-label={`Votar por ${caseData.sideA.name}`}
                   className="flex items-center justify-between gap-2 px-3 py-2 min-h-[44px] rounded-2xl bg-primary/10 border border-primary/50 hover:bg-primary/20 active:bg-primary/30 transition-all disabled:opacity-40 disabled:cursor-not-allowed overflow-hidden shadow-[0_0_10px_rgba(51,102,153,0.25)]"
                 >
@@ -337,7 +369,6 @@ const CaseCardComponent: React.FC<CaseCardProps> = ({
                 <button
                   onClick={(e) => { e.stopPropagation(); handleVote('BothWrong'); }}
                   disabled={isVoting || !canVote}
-                  role="button"
                   aria-label="Votar porque ambos están equivocados"
                   className="flex items-center justify-between gap-2 px-3 py-2 min-h-[44px] rounded-2xl bg-border-main/10 border border-border-main/90 hover:bg-border-main/20 active:bg-border-main/30 transition-all disabled:opacity-40 disabled:cursor-not-allowed overflow-hidden shadow-[0_0_10px_rgba(0,0,0,0.15)]"
                 >
@@ -358,7 +389,6 @@ const CaseCardComponent: React.FC<CaseCardProps> = ({
                 <button
                   onClick={(e) => { e.stopPropagation(); handleVote('B'); }}
                   disabled={isVoting || !canVote}
-                  role="button"
                   aria-label={`Votar por ${caseData.sideB.name}`}
                   className="flex items-center justify-between gap-2 px-3 py-2 min-h-[44px] rounded-2xl bg-secondary/10 border border-secondary/50 hover:bg-secondary/20 active:bg-secondary/30 transition-all disabled:opacity-40 disabled:cursor-not-allowed overflow-hidden shadow-[0_0_10px_rgba(255,102,0,0.25)]"
                 >
@@ -386,7 +416,8 @@ const CaseCardComponent: React.FC<CaseCardProps> = ({
                 </span>
               </div>
             )
-          ) : (
+          )}
+          {caseData.type !== 'classic' && caseData.sideB.name !== 'Waiting...' && (userVote || isSideAOwner || isSideBOwner) && (
             <div className="space-y-2">
               <div>
                 <div className="hidden sm:flex justify-between items-end">
@@ -429,7 +460,7 @@ const CaseCardComponent: React.FC<CaseCardProps> = ({
               {userVote && totalVotes > 0 && (
                 <p className="text-center text-[10px] font-bold text-text-muted uppercase tracking-widest mt-1">
                   {t('cases.youVotedFor', {
-                    name: userVote === 'BOTH_WRONG' ? t('cases.bothWrong') : userVote === 'A' ? caseData.sideA.name : caseData.sideB.name
+                    name: votedForName
                   })}
                 </p>
               )}
@@ -439,8 +470,7 @@ const CaseCardComponent: React.FC<CaseCardProps> = ({
                 </p>
               )}
             </div>
-          )
-        )}
+          )}
 
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-2">
@@ -463,7 +493,7 @@ const CaseCardComponent: React.FC<CaseCardProps> = ({
               </button>
             </Tooltip>
 
-            <div className="relative" onClick={(e) => e.stopPropagation()}>
+            <div className="relative" ref={reactionShieldRef}>
               <ReactionBar
                 key={caseData.id}
                 targetId={caseData.id}
@@ -534,7 +564,7 @@ const CaseCardComponent: React.FC<CaseCardProps> = ({
               onChange={(e) => setCommentText(e.target.value)}
               placeholder={t('comments.writeComment')}
               className="flex-1 px-4 py-2 rounded-full border border-border-main/5 bg-card text-text-main text-sm font-medium focus:outline-none focus:border-primary/50"
-              onKeyPress={(e) => e.key === 'Enter' && handleAddComment()}
+              onKeyDown={(e) => { if (e.key === 'Enter') { e.preventDefault(); handleAddComment(); } }}
             />
             {commentText.trim() && (
               <button

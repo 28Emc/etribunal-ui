@@ -28,7 +28,7 @@ export function CommentThread({
   onUserClick,
   isReacting,
   isDeleting,
-}: CommentThreadProps) {
+}: Readonly<CommentThreadProps>) {
   return (
     <div>
       {comments.map((comment, idx) => (

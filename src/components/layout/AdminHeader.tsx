@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { useNavigate, Link, useLocation } from 'react-router-dom';
-import { Sun, Moon, Globe, LogOut, User, ChevronDown, Menu, X } from 'lucide-react';
+import { Sun, Moon, Globe, LogOut, User, ChevronDown, Menu } from 'lucide-react';
 import { cn } from '@utils/helpers';
 import { useAuth } from '@context/AuthContext';
 import { Tooltip } from '@shared/components/Tooltip';
@@ -29,7 +29,7 @@ export const AdminHeader = ({ titleKey, onMobileMenuToggle, showMobileMenuButton
   const handleToggleTheme = () => {
     const newTheme = theme === 'dark' ? 'light' : 'dark';
     setTheme(newTheme);
-    document.documentElement.setAttribute('data-theme', newTheme);
+    document.documentElement.dataset.theme = newTheme;
     localStorage.setItem('etribunal_theme', newTheme);
   };
 
@@ -62,7 +62,7 @@ export const AdminHeader = ({ titleKey, onMobileMenuToggle, showMobileMenuButton
           )}
           <nav aria-label="Breadcrumb" className="flex items-center gap-2 text-sm flex-wrap">
             {breadcrumbs.map((crumb, idx) => (
-              <span key={idx} className="flex items-center gap-2">
+              <span key={crumb.href} className="flex items-center gap-2">
                 {idx > 0 && <span className="text-text-muted">/</span>}
                 {crumb.href && crumb.href !== location.pathname ? (
                   <Link to={crumb.href} className="text-text-muted hover:text-primary transition-colors font-medium">
@@ -102,7 +102,7 @@ export const AdminHeader = ({ titleKey, onMobileMenuToggle, showMobileMenuButton
             <AnimatePresence>
               {showLanguageMenu && (
                 <>
-                  <div className="fixed inset-0 z-40" onClick={() => setShowLanguageMenu(false)} />
+                  <button type="button" tabIndex={-1} aria-label="Cerrar menú" className="fixed inset-0 z-40 cursor-default" onMouseDown={() => setShowLanguageMenu(false)} />
                   <motion.div
                     initial={{ opacity: 0, y: 10, scale: 0.95 }}
                     animate={{ opacity: 1, y: 0, scale: 1 }}
@@ -144,7 +144,7 @@ export const AdminHeader = ({ titleKey, onMobileMenuToggle, showMobileMenuButton
             <AnimatePresence>
               {showUserMenu && (
                 <>
-                  <div className="fixed inset-0 z-40" onClick={() => setShowUserMenu(false)} />
+                  <button type="button" tabIndex={-1} aria-label="Cerrar menú" className="fixed inset-0 z-40 cursor-default" onMouseDown={() => setShowUserMenu(false)} />
                   <motion.div
                     initial={{ opacity: 0, y: 10, scale: 0.95 }}
                     animate={{ opacity: 1, y: 0, scale: 1 }}

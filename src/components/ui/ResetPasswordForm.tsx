@@ -1,12 +1,12 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, type SyntheticEvent } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
 import { motion, AnimatePresence } from 'motion/react';
-import { Lock, Gavel, ArrowLeft, Loader2, CheckCircle, X, AlertCircle, Eye, EyeOff } from 'lucide-react';
+import { Lock, Gavel, ArrowLeft, CheckCircle, X, AlertCircle, Eye, EyeOff } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 import { apiClient } from '@api/client';
 import { cn } from '@utils/helpers';
 
-function Countdown({ seconds = 3, onComplete }: { seconds?: number; onComplete: () => void }) {
+function Countdown({ seconds = 3, onComplete }: Readonly<{ seconds?: number; onComplete: () => void }>) {
   const [count, setCount] = useState(seconds);
 
   useEffect(() => {
@@ -31,7 +31,7 @@ interface ResetPasswordProps {
   onPasswordReset?: () => void;
 }
 
-export function ResetPassword({ onPasswordReset }: ResetPasswordProps) {
+export function ResetPassword({ onPasswordReset }: Readonly<ResetPasswordProps>) {
   const navigate = useNavigate();
   const { t } = useTranslation();
   const [searchParams] = useSearchParams();
@@ -54,12 +54,13 @@ export function ResetPassword({ onPasswordReset }: ResetPasswordProps) {
 
   const validateField = (name: keyof FormErrors, value: string): string => {
     switch (name) {
-      case 'password':
+      case 'password': {
         if (!value) return t('auth.passwordRequired');
         if (value.length < 8) return t('auth.passwordMinLength');
         const passwordRegex = /^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[@$!%*?&])[A-Za-z\d@$!%*?&]{8,}$/;
         if (!passwordRegex.test(value)) return t('auth.passwordRequirements');
         return '';
+      }
       case 'confirmPassword':
         if (!value) return t('auth.confirmPassword') || 'Please confirm your password';
         if (value !== password) return t('auth.passwordsDoNotMatch');
@@ -75,7 +76,7 @@ export function ResetPassword({ onPasswordReset }: ResetPasswordProps) {
     setErrors(prev => ({ ...prev, [field]: error }));
   };
 
-  const handleSubmit = async (e: React.FormEvent) => {
+  const handleSubmit = async (e: SyntheticEvent<HTMLFormElement>) => {
     e.preventDefault();
 
     const newErrors: FormErrors = {
@@ -119,7 +120,7 @@ export function ResetPassword({ onPasswordReset }: ResetPasswordProps) {
       </button>
 
       <AnimatePresence mode="wait">
-        {tokenError ? (
+        {tokenError && (
           <motion.div
             key="error-view"
             initial={{ opacity: 0, y: 10 }}
@@ -147,7 +148,8 @@ export function ResetPassword({ onPasswordReset }: ResetPasswordProps) {
               {t('auth.requestNewLink')}
             </button>
           </motion.div>
-        ) : success ? (
+        )}
+        {!tokenError && success && (
           <motion.div
             key="success-view"
             initial={{ opacity: 0, y: 10 }}
@@ -170,7 +172,8 @@ export function ResetPassword({ onPasswordReset }: ResetPasswordProps) {
             </p>
             <Countdown seconds={3} onComplete={() => navigate('/login')} />
           </motion.div>
-        ) : (
+        )}
+        {!tokenError && !success && (
           <motion.div
             key="form-view"
             initial={{ opacity: 0, y: 10 }}

@@ -65,46 +65,20 @@ describe('useInfiniteScroll', () => {
     expect(loadMore).toHaveBeenCalledTimes(1);
   });
 
-  it('NO debería llamar onLoadMore si hasMore es false', () => {
+  it.each([
+    { name: 'NO debería llamar onLoadMore si hasMore es false', hasMore: false, isLoading: false, intersecting: true },
+    { name: 'NO debería llamar onLoadMore si isLoading es true', hasMore: true, isLoading: true, intersecting: true },
+    { name: 'NO debería llamar onLoadMore si no está intersectando', hasMore: true, isLoading: false, intersecting: false },
+  ])('$name', ({ hasMore, isLoading, intersecting }) => {
     const loadMore = vi.fn();
     renderHook(() => useInfiniteScroll({
       onLoadMore: loadMore,
-      hasMore: false,
-      isLoading: false,
+      hasMore,
+      isLoading,
     }));
 
     act(() => {
-      intersectionCallback([{ isIntersecting: true } as IntersectionObserverEntry]);
-    });
-
-    expect(loadMore).not.toHaveBeenCalled();
-  });
-
-  it('NO debería llamar onLoadMore si isLoading es true', () => {
-    const loadMore = vi.fn();
-    renderHook(() => useInfiniteScroll({
-      onLoadMore: loadMore,
-      hasMore: true,
-      isLoading: true,
-    }));
-
-    act(() => {
-      intersectionCallback([{ isIntersecting: true } as IntersectionObserverEntry]);
-    });
-
-    expect(loadMore).not.toHaveBeenCalled();
-  });
-
-  it('NO debería llamar onLoadMore si no está intersectando', () => {
-    const loadMore = vi.fn();
-    renderHook(() => useInfiniteScroll({
-      onLoadMore: loadMore,
-      hasMore: true,
-      isLoading: false,
-    }));
-
-    act(() => {
-      intersectionCallback([{ isIntersecting: false } as IntersectionObserverEntry]);
+      intersectionCallback([{ isIntersecting: intersecting } as IntersectionObserverEntry]);
     });
 
     expect(loadMore).not.toHaveBeenCalled();

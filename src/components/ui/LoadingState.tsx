@@ -29,7 +29,7 @@ interface EmptyStateProps {
   titleKey: string;
 }
 
-export function EmptyState({ icon, titleKey }: EmptyStateProps) {
+export function EmptyState({ icon, titleKey }: Readonly<EmptyStateProps>) {
   const { t } = useTranslation();
   
   return (
@@ -45,7 +45,7 @@ interface ErrorStateProps {
   onRetry?: () => void;
 }
 
-export function ErrorState({ message, onRetry }: ErrorStateProps) {
+export function ErrorState({ message, onRetry }: Readonly<ErrorStateProps>) {
   const { t } = useTranslation();
   
   return (

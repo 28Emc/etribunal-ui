@@ -1,7 +1,7 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { useNavigate, useLocation } from 'react-router-dom';
-import { Cpu, Users, Shield, BarChart, Settings, ChevronLeft, ChevronRight, Menu, X } from 'lucide-react';
+import { Cpu, Users, Shield, BarChart, Settings, ChevronLeft, ChevronRight, Menu } from 'lucide-react';
 import { cn } from '@utils/helpers';
 import { Tooltip } from '@shared/components/Tooltip';
 import { motion, AnimatePresence } from 'motion/react';

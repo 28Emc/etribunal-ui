@@ -1,19 +1,20 @@
 import React, { useState, useEffect, Suspense, lazy } from 'react';
 import { useNavigate, Link, useLocation } from 'react-router-dom';
 import { Gavel, Search, Bell, User as UserIcon, Globe, ChevronDown, ChevronLeft, Check, Menu, X, Home, TrendingUp, Settings, Plus, Loader2, Sun, Moon, FileText, Shield, BookOpen, Info } from 'lucide-react';
-import { apiClient, authStorage } from '@api/client';
 import { useTranslation } from 'react-i18next';
+import type { TFunction } from 'i18next';
+import type { User } from '@typings/index';
 import { Sidebar } from './Sidebar';
 import { TrendingSidebar } from './TrendingSidebar';
 import { useAuth } from '@context/AuthContext';
 import { useNotifications } from '@features/cases/hooks/useNotifications';
 import { useSearch } from '@shared/hooks/useSearch';
+import type { UserSearchResult, CaseSearchResult } from '@hooks/useSearch';
 import { Tooltip } from '@shared/components/Tooltip';
 import { Skeleton } from '@shared/components/Skeleton';
 import { cn, getCasePath } from '@utils/helpers';
 import { getAnonymousAvatar } from '@services/anonymity';
 import { AnimatePresence, motion } from 'motion/react';
-import { useTheme } from '@hooks/useTheme';
 
 const NotificationsMenu = lazy(() => import('@features/users/components/NotificationsMenu').then(m => ({ default: m.NotificationsMenu })));
 const Login = lazy(() => import('@features/auth/components/Login').then(m => ({ default: m.Login })));
@@ -23,7 +24,7 @@ interface MainLayoutProps {
   activeTab?: 'for_you' | 'following' | 'trending' | 'top-judges';
 }
 
-export function MainLayout({ children, activeTab = 'for_you' }: MainLayoutProps) {
+export function MainLayout({ children, activeTab = 'for_you' }: Readonly<MainLayoutProps>) {
   const { t, i18n } = useTranslation();
   const navigate = useNavigate();
   const { currentUser } = useAuth();
@@ -71,7 +72,7 @@ export function MainLayout({ children, activeTab = 'for_you' }: MainLayoutProps)
   };
 
   useEffect(() => {
-    document.documentElement.setAttribute('data-theme', theme);
+    document.documentElement.dataset.theme = theme;
     localStorage.setItem('etribunal_theme', theme);
   }, [theme]);
 
@@ -178,59 +179,19 @@ export function MainLayout({ children, activeTab = 'for_you' }: MainLayoutProps)
                 <input ref={searchInputRef} type="text" placeholder={t('nav.searchPlaceholder')} value={search.query} onChange={handleSearchInputChange} onFocus={() => search.query.trim().length >= 2 && setIsSearchDropdownOpen(true)} onKeyDown={handleSearchKeyDown} className="w-full bg-card border border-border-main/10 rounded-xl pl-10 pr-4 py-2.5 text-sm text-text-main placeholder:text-text-muted focus:outline-none focus:border-primary transition-all" autoComplete="off" />
               </div>
 
-              {isSearchDropdownOpen && search.query.trim().length >= 2 && (
-                <div className="absolute top-full mt-4 w-full bg-card border border-border-main/10 rounded-2xl shadow-xl z-50 overflow-hidden">
-                  {search.isSearching ? (
-                    <div className="flex items-center justify-center h-20 w-full">
-                      <Loader2 className="w-5 h-5 animate-spin text-primary" />
-                    </div>
-                  ) : (search.results.cases.length > 0 || search.results.users.length > 0) ? (
-                    <>
-                      {search.results.users.length > 0 && (
-                        <div className="p-2">
-                          <div className="flex items-center gap-2 px-3 py-1.5 text-xs font-bold text-text-muted">
-                            <UserIcon className="w-3 h-3" /> {t('cases.judges')}
-                          </div>
-                          {search.results.users.slice(0, 5).map((user) => (
-                            <button key={user.id} onClick={() => handleUserResultClick(user.username)} className="w-full flex items-center gap-3 px-3 py-2 hover:bg-primary/5 transition-colors text-left">
-                              <img src={user.avatar_url || `https://picsum.photos/seed/${user.id}/100/100`} alt="" className="w-8 h-8 rounded-full object-cover" />
-                              <div className="flex-1 min-w-0">
-                                <p className="text-sm font-medium text-text-main">@{user.username}</p>
-                              </div>
-                            </button>
-                          ))}
-                        </div>
-                      )}
-
-                      {search.results.cases.length > 0 && (
-                        <div className={`p-2 ${search.results.users.length > 0 ? 'border-t border-border-main/10' : ''}`}>
-                          <div className="flex items-center gap-2 px-3 py-1.5 text-xs font-bold text-text-muted">
-                            <Gavel className="w-3 h-3" /> {t('cases.title')}
-                          </div>
-                          {search.results.cases.slice(0, 5).map((c) => (
-                            <button key={c.id} onClick={() => handleSearchCaseClick(c)} className="w-full flex items-center gap-3 px-3 py-2 hover:bg-primary/5 transition-colors text-left">
-                              <div className="w-10 h-10 rounded-lg bg-border-main/10 flex items-center justify-center">
-                                <Gavel className="w-4 h-4 text-text-muted" />
-                              </div>
-                              <div className="flex-1 min-w-0">
-                                <p className="text-sm font-medium text-text-main truncate">{c.title}</p>
-                              </div>
-                            </button>
-                          ))}
-                        </div>
-                      )}
-
-                      <button onClick={() => { navigate(`/search?q=${encodeURIComponent(search.query.trim())}`); setIsSearchDropdownOpen(false); }} className="w-full p-3 text-center text-sm font-medium text-primary hover:bg-primary/5 border-t border-border-main/10">
-                        {t('nav.searchSeeAll') || 'Ver todos los resultados'} →
-                      </button>
-                    </>
-                  ) : (
-                    <div className="flex items-center justify-center h-10 w-full text-xs font-bold text-text-muted tracking-widest py-2">
-                      {t('nav.searchNoResults')}
-                    </div>
-                  )}
-                </div>
-              )}
+              <SearchDropdown
+                isOpen={isSearchDropdownOpen && search.query.trim().length >= 2}
+                isSearching={search.isSearching}
+                users={search.results.users}
+                cases={search.results.cases}
+                t={t}
+                onUserClick={handleUserResultClick}
+                onCaseClick={handleSearchCaseClick}
+                onSeeAll={() => {
+                  navigate(`/search?q=${encodeURIComponent(search.query.trim())}`);
+                  setIsSearchDropdownOpen(false);
+                }}
+              />
             </div>
           </div>
 
@@ -257,7 +218,7 @@ export function MainLayout({ children, activeTab = 'for_you' }: MainLayoutProps)
               <AnimatePresence>
                 {showLanguageMenu && (
                   <>
-                    <div className="fixed inset-0 z-40" onClick={() => setShowLanguageMenu(false)} />
+                    <button type="button" tabIndex={-1} aria-label="Cerrar menú" className="fixed inset-0 z-40 cursor-default" onMouseDown={() => setShowLanguageMenu(false)} />
                     <motion.div initial={{ opacity: 0, y: 10, scale: 0.95 }} animate={{ opacity: 1, y: 0, scale: 1 }} exit={{ opacity: 0, y: 10, scale: 0.95 }} className="absolute right-0 mt-2 w-40 bg-card border border-border-main/10 rounded-2xl shadow-2xl z-50 overflow-hidden py-2">
                       {[{ code: 'es', label: 'Español' }, { code: 'en', label: 'English' }].map((lang) => (
                         <button key={lang.code} onClick={() => handleLanguageSelect(lang.code)} className={cn("w-full px-4 py-2 text-left flex items-center justify-between hover:bg-primary/5 transition-colors", i18n.language === lang.code ? "text-primary font-black" : "text-text-main font-medium")}>
@@ -272,12 +233,13 @@ export function MainLayout({ children, activeTab = 'for_you' }: MainLayoutProps)
             </div>
 
             <div className="hidden md:flex items-center gap-1 lg:hidden">
-              {isLoadingActiveUsers ? (
+              {isLoadingActiveUsers && (
                 <div className="flex items-center gap-1">
                   <Skeleton className="w-2 h-2 rounded-full" />
                   <Skeleton className="w-10 h-3 rounded" />
                 </div>
-              ) : activeUsers && activeUsers.total > 0 ? (
+              )}
+              {!isLoadingActiveUsers && activeUsers && activeUsers.total > 0 && (
                 <div className="flex items-center gap-1">
                   <div className="flex -space-x-1">
                     {activeUsers.users.slice(0, 3).map((u) => (
@@ -292,14 +254,14 @@ export function MainLayout({ children, activeTab = 'for_you' }: MainLayoutProps)
                   </div>
                   <span className="text-[10px] font-black text-text-muted">{activeUsers.total}</span>
                 </div>
-              ) : null}
+              )}
             </div>
 
             {currentUser ? (
               <>
-                <div onClick={() => navigate(`/users/${currentUser.username}`)} className="w-9 h-9 rounded-full bg-primary/20 border border-primary/30 flex items-center justify-center cursor-pointer overflow-hidden shadow-lg active:scale-95 transition-transform">
+                <button type="button" onClick={() => navigate(`/users/${currentUser.username}`)} className="w-9 h-9 rounded-full bg-primary/20 border border-primary/30 flex items-center justify-center cursor-pointer overflow-hidden shadow-lg active:scale-95 transition-transform">
                   <img src={currentUser?.avatar || "https://picsum.photos/seed/user123/100/100"} alt="Profile" className="w-full h-full object-cover" referrerPolicy="no-referrer" />
-                </div>
+                </button>
 
                 <div className="relative">
                   <button onClick={handleOpenNotifications} className="w-9 h-9 rounded-lg bg-card border border-border-main/10 flex items-center justify-center text-text-muted hover:text-primary transition-colors relative active:scale-95">
@@ -361,208 +323,383 @@ export function MainLayout({ children, activeTab = 'for_you' }: MainLayoutProps)
         {showAuthModal && <Login isModal={true} onClose={() => setShowAuthModal(false)} />}
       </Suspense>
 
-      <AnimatePresence>
-        {showSidebar && (
-          <>
-            <div className="fixed inset-0 z-[70] bg-black/60 lg:hidden" onClick={() => setShowSidebar(false)} />
-            <motion.div initial={{ x: '-100%' }} animate={{ x: 0 }} exit={{ x: '-100%' }} transition={{ type: 'spring', damping: 25, stiffness: 300 }} className="fixed top-0 left-0 bottom-0 z-[80] w-80 bg-card border-r border-border-main/10 pt-4 lg:hidden overflow-y-auto">
-              <div className="flex items-center justify-between px-4 pb-4 border-b border-border-main/10">
-                <Link to="/" onClick={() => setShowSidebar(false)}>
-                  <img src={theme === 'dark' ? '/icons/eTribunal-logo-horizontal-bn.png' : '/icons/eTribunal-logo-horizontal.png'} alt="eTribunal" className="h-16 w-auto" />
-                </Link>
-                <button onClick={() => setShowSidebar(false)} className="w-9 h-9 rounded-lg bg-border-main/10 flex items-center justify-center text-text-main">
-                  <X className="w-5 h-5" />
+      <MobileSidebarSheet
+        open={showSidebar}
+        theme={theme}
+        activeTab={activeTab}
+        activeUsers={activeUsers}
+        currentUser={currentUser}
+        t={t}
+        onClose={() => setShowSidebar(false)}
+      />
+
+      <MobileSearchOverlay
+            open={showMobileSearch}
+            isSearching={search.isSearching}
+            users={search.results.users}
+            cases={search.results.cases}
+            query={mobileSearchQuery}
+            t={t}
+            onQueryChange={(value) => {
+              setMobileSearchQuery(value);
+              search.setQuery(value);
+            }}
+            onClose={() => {
+              setShowMobileSearch(false);
+              search.clearResults();
+              setMobileSearchQuery('');
+            }}
+            onSelectUser={(username) => {
+              navigate(`/users/${username}`);
+              setShowMobileSearch(false);
+              setMobileSearchQuery('');
+              search.clearResults();
+            }}
+            onSelectCase={(caseItem) => {
+              navigate(getCasePath({ id: caseItem.id, title: caseItem.title, sideA: { username: caseItem.side_a_user?.username } } as any));
+              setShowMobileSearch(false);
+              setMobileSearchQuery('');
+              search.clearResults();
+            }}
+            onSelectAll={() => {
+              navigate(`/search?q=${encodeURIComponent(mobileSearchQuery.trim())}`);
+              setShowMobileSearch(false);
+              setMobileSearchQuery('');
+            }}
+          />
+        </div>
+      );
+    }
+
+interface ActiveUser {
+  id: string;
+  username: string;
+  avatar_url: string | null;
+  is_anonymous: boolean;
+}
+
+interface SearchDropdownProps {
+  isOpen: boolean;
+  isSearching: boolean;
+  users: UserSearchResult[];
+  cases: CaseSearchResult[];
+  t: TFunction;
+  onUserClick: (username: string) => void;
+  onCaseClick: (caseItem: CaseSearchResult) => void;
+  onSeeAll: () => void;
+}
+
+function SearchDropdown({ isOpen, isSearching, users, cases, t, onUserClick, onCaseClick, onSeeAll }: Readonly<SearchDropdownProps>) {
+  if (!isOpen) return null;
+  const hasResults = users.length > 0 || cases.length > 0;
+
+  return (
+    <div className="absolute top-full mt-4 w-full bg-card border border-border-main/10 rounded-2xl shadow-xl z-50 overflow-hidden">
+      {isSearching && (
+        <div className="flex items-center justify-center h-20 w-full">
+          <Loader2 className="w-5 h-5 animate-spin text-primary" />
+        </div>
+      )}
+      {!isSearching && hasResults && (
+        <>
+          {users.length > 0 && (
+            <div className="p-2">
+              <div className="flex items-center gap-2 px-3 py-1.5 text-xs font-bold text-text-muted">
+                <UserIcon className="w-3 h-3" /> {t('cases.judges')}
+              </div>
+              {users.slice(0, 5).map((user) => (
+                <button key={user.id} onClick={() => onUserClick(user.username)} className="w-full flex items-center gap-3 px-3 py-2 hover:bg-primary/5 transition-colors text-left">
+                  <img src={user.avatar_url || `https://picsum.photos/seed/${user.id}/100/100`} alt="" className="w-8 h-8 rounded-full object-cover" />
+                  <div className="flex-1 min-w-0">
+                    <p className="text-sm font-medium text-text-main">@{user.username}</p>
+                  </div>
                 </button>
+              ))}
+            </div>
+          )}
+
+          {cases.length > 0 && (
+            <div className={`p-2 ${users.length > 0 ? 'border-t border-border-main/10' : ''}`}>
+              <div className="flex items-center gap-2 px-3 py-1.5 text-xs font-bold text-text-muted">
+                <Gavel className="w-3 h-3" /> {t('cases.title')}
               </div>
-
-              <div className="flex-1 overflow-y-auto p-4 space-y-6">
-                {activeUsers && activeUsers.total > 0 && (
-                  <div className="bg-green-500/10 border border-green-500/20 rounded-2xl p-4">
-                    <div className="flex items-center gap-2 mb-3">
-                      <div className="w-2 h-2 bg-green-500 rounded-full animate-pulse" />
-                      <span className="text-xs font-black uppercase tracking-widest text-green-500">{t('sidebar.votingNow')}</span>
-                    </div>
-                    <div className="flex items-center justify-between">
-                      <div className="flex -space-x-3">
-                        {activeUsers.users.slice(0, 4).map((u) => (
-                          <img
-                            key={u.id}
-                            className="w-10 h-10 rounded-full ring-2 ring-card object-cover"
-                            src={u.is_anonymous ? getAnonymousAvatar(u.id) : (u.avatar_url || 'https://picsum.photos/seed/default/100/100')}
-                            alt={u.username}
-                            referrerPolicy="no-referrer"
-                          />
-                        ))}
-                        {activeUsers.total > 4 && (
-                          <div className="w-10 h-10 rounded-full ring-2 ring-card bg-border-main/50 flex items-center justify-center text-[10px] font-black text-text-muted">
-                            +{activeUsers.total - 4}
-                          </div>
-                        )}
-                      </div>
-                      <span className="text-xs font-medium text-text-muted">
-                        {activeUsers.total} {t('sidebar.activeUsers')}
-                      </span>
-                    </div>
+              {cases.slice(0, 5).map((c) => (
+                <button key={c.id} onClick={() => onCaseClick(c)} className="w-full flex items-center gap-3 px-3 py-2 hover:bg-primary/5 transition-colors text-left">
+                  <div className="w-10 h-10 rounded-lg bg-border-main/10 flex items-center justify-center">
+                    <Gavel className="w-4 h-4 text-text-muted" />
                   </div>
-                )}
-
-                <div>
-                  <div className="text-[10px] font-black uppercase tracking-widest text-text-muted mb-2 px-4">{t('nav.feed')}</div>
-                  <nav className="space-y-1 rounded-2xl">
-                    <Link to="/" onClick={() => setShowSidebar(false)} className={cn("flex items-center gap-4 px-4 py-3 rounded-2xl transition-all", activeTab === 'for_you' ? "bg-primary/10 text-primary" : "text-text-muted hover:bg-border-main/5 hover:text-text-main")}>
-                      <Home className="w-5 h-5" />
-                      <span className="text-sm font-black uppercase tracking-widest">{t('nav.feed')}</span>
-                    </Link>
-                    <Link to="/cases/following" onClick={() => setShowSidebar(false)} className={cn("flex items-center gap-4 px-4 py-3 rounded-2xl transition-all", activeTab === 'following' ? "bg-primary/10 text-primary" : "text-text-muted hover:bg-border-main/5 hover:text-text-main")}>
-                      <UserIcon className="w-5 h-5" />
-                      <span className="text-sm font-black uppercase tracking-widest">{t('profile.following')}</span>
-                    </Link>
-                  </nav>
-                </div>
-
-                <div>
-                  <div className="text-[10px] font-black uppercase tracking-widest text-text-muted mb-2 px-4">{t('sidebar.discover')}</div>
-                  <nav className="space-y-1 rounded-2xl">
-                    <Link to="/cases/trending" onClick={() => setShowSidebar(false)} className="flex items-center gap-4 px-4 py-3 rounded-2xl text-text-muted hover:bg-border-main/5 hover:text-text-main transition-all">
-                      <TrendingUp className="w-5 h-5" />
-                      <span className="text-sm font-black uppercase tracking-widest">{t('sidebar.trending')}</span>
-                    </Link>
-                    <Link to="/top-judges" onClick={() => setShowSidebar(false)} className="flex items-center gap-4 px-4 py-3 rounded-2xl text-text-muted hover:bg-border-main/5 hover:text-text-main transition-all">
-                      <UserIcon className="w-5 h-5" />
-                      <span className="text-sm font-black uppercase tracking-widest">{t('sidebar.topJudges')}</span>
-                    </Link>
-                  </nav>
-                </div>
-
-                <div>
-                  <div className="text-[10px] font-black uppercase tracking-widest text-text-muted mb-2 px-4">{t('layout.legal')}</div>
-                  <nav className="space-y-1 rounded-2xl">
-                    <Link to="/legal/terms" onClick={() => setShowSidebar(false)} className="flex items-center gap-4 px-4 py-3 rounded-2xl text-text-muted hover:bg-border-main/5 hover:text-text-main transition-all">
-                      <FileText className="w-5 h-5" />
-                      <span className="text-sm font-black uppercase tracking-widest">{t('layout.terms')}</span>
-                    </Link>
-                    <Link to="/legal/privacy" onClick={() => setShowSidebar(false)} className="flex items-center gap-4 px-4 py-3 rounded-2xl text-text-muted hover:bg-border-main/5 hover:text-text-main transition-all">
-                      <Shield className="w-5 h-5" />
-                      <span className="text-sm font-black uppercase tracking-widest">{t('layout.privacy')}</span>
-                    </Link>
-                    <Link to="/legal/guidelines" onClick={() => setShowSidebar(false)} className="flex items-center gap-4 px-4 py-3 rounded-2xl text-text-muted hover:bg-border-main/5 hover:text-text-main transition-all">
-                      <BookOpen className="w-5 h-5" />
-                      <span className="text-sm font-black uppercase tracking-widest">{t('layout.guidelines')}</span>
-                    </Link>
-                    <Link to="/legal/about" onClick={() => setShowSidebar(false)} className="flex items-center gap-4 px-4 py-3 rounded-2xl text-text-muted hover:bg-border-main/5 hover:text-text-main transition-all">
-                      <Info className="w-5 h-5" />
-                      <span className="text-sm font-black uppercase tracking-widest">{t('layout.about')}</span>
-                    </Link>
-                  </nav>
-                </div>
-
-                {currentUser ? (
-                  <div>
-                    <div className="text-[10px] font-black uppercase tracking-widest text-text-muted mb-2 px-4">{t('layout.account')}</div>
-                    <nav className="space-y-1 rounded-2xl">
-                      <Link to="/settings" onClick={() => setShowSidebar(false)} className="flex items-center gap-4 px-4 py-3 rounded-2xl text-text-muted hover:bg-border-main/5 hover:text-text-main transition-all">
-                        <Settings className="w-5 h-5" />
-                        <span className="text-sm font-black uppercase tracking-widest">{t('layout.settings')}</span>
-                      </Link>
-                    </nav>
+                  <div className="flex-1 min-w-0">
+                    <p className="text-sm font-medium text-text-main truncate">{c.title}</p>
                   </div>
-                ) : (
-                  <div>
-                    <div className="text-[10px] font-black uppercase tracking-widest text-text-muted mb-2 px-4">{t('layout.account')}</div>
-                    <nav className="space-y-1 rounded-2xl">
-                      <Link to="/login" onClick={() => setShowSidebar(false)} className="flex items-center gap-4 px-4 py-3 rounded-2xl bg-primary text-white hover:bg-primary/90 transition-all">
-                        <UserIcon className="w-5 h-5" />
-                        <span className="text-sm font-black uppercase tracking-widest">{t('nav.signIn')}</span>
-                      </Link>
-                    </nav>
-                  </div>
-                )}
-
-                <div className="pt-6 border-t border-border-main/10">
-                  <div className="text-center">
-                    <span className="text-[10px] text-text-muted">© 2026 eTribunal</span>
-                  </div>
-                </div>
-              </div>
-            </motion.div>
-          </>
-        )}
-      </AnimatePresence>
-
-      <AnimatePresence>
-        {showMobileSearch && (
-          <>
-            <div className="fixed inset-0 z-[65] bg-black/60 lg:hidden" onClick={() => { setShowMobileSearch(false); search.clearResults(); setMobileSearchQuery(''); }} />
-            <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} className="fixed inset-0 z-[70] bg-background lg:hidden flex flex-col">
-              <div className="p-4 pb-2 border-b border-border-main/10">
-                <button onClick={() => { setShowMobileSearch(false); search.clearResults(); setMobileSearchQuery(''); }} className="w-9 h-9 rounded-lg bg-border-main/10 flex items-center justify-center text-text-muted">
-                  <ChevronLeft className="w-5 h-5" />
                 </button>
-              </div>
-              <div className="p-4 pt-2">
-                <div className="relative">
-                  <Search className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-text-muted" />
-                  <input type="text" placeholder={t('nav.searchPlaceholder')} value={mobileSearchQuery} onChange={(e) => { setMobileSearchQuery(e.target.value); search.setQuery(e.target.value); }} onKeyDown={(e) => { if (e.key === 'Enter' && mobileSearchQuery.trim()) { navigate(`/search?q=${encodeURIComponent(mobileSearchQuery.trim())}`); setShowMobileSearch(false); setMobileSearchQuery(''); search.clearResults(); } }} className="w-full bg-card border border-border-main/10 rounded-xl pl-12 pr-4 py-4 text-base text-text-main placeholder:text-text-muted focus:outline-none focus:border-primary transition-all" autoFocus />
-                </div>
-              </div>
+              ))}
+            </div>
+          )}
 
-              <div className="flex-1 overflow-y-auto">
-                {search.isSearching ? (
-                  <div className="flex items-center justify-center h-32 w-full">
-                    <Loader2 className="w-6 h-6 animate-spin text-primary" />
-                  </div>
-                ) : (search.results.cases.length > 0 || search.results.users.length > 0) ? (
-                  <>
-                    {search.results.users.length > 0 && (
-                      <div className="p-2">
-                        <div className="flex items-center gap-2 px-3 py-1.5 text-xs font-bold text-text-muted">
-                          <UserIcon className="w-3 h-3" /> {t('cases.judges')}
-                        </div>
-                        {search.results.users.slice(0, 5).map((user) => (
-                          <button key={user.id} onClick={() => { navigate(`/users/${user.username}`); setShowMobileSearch(false); setMobileSearchQuery(''); search.clearResults(); }} className="w-full flex items-center gap-3 px-3 py-2 hover:bg-primary/5 transition-colors text-left">
-                            <img src={user.avatar_url || `https://picsum.photos/seed/${user.id}/100/100`} alt="" className="w-10 h-10 rounded-full object-cover" />
-                            <div className="flex-1 min-w-0">
-                              <p className="text-base font-medium text-text-main">@{user.username}</p>
-                            </div>
-                          </button>
-                        ))}
-                      </div>
-                    )}
-
-                    {search.results.cases.length > 0 && (
-                      <div className={`p-2 ${search.results.users.length > 0 ? 'border-t border-border-main/10' : ''}`}>
-                        <div className="flex items-center gap-2 px-3 py-1.5 text-xs font-bold text-text-muted">
-                          <Gavel className="w-3 h-3" /> {t('cases.title')}
-                        </div>
-                        {search.results.cases.slice(0, 5).map((c) => (
-                          <button key={c.id} onClick={() => { navigate(getCasePath({ id: c.id, title: c.title, sideA: { username: c.side_a_user?.username } } as any)); setShowMobileSearch(false); setMobileSearchQuery(''); search.clearResults(); }} className="w-full flex items-center gap-3 px-3 py-2 hover:bg-primary/5 transition-colors text-left">
-                            <div className="w-10 h-10 rounded-lg bg-border-main/10 flex items-center justify-center">
-                              <Gavel className="w-4 h-4 text-text-muted" />
-                            </div>
-                            <div className="flex-1 min-w-0">
-                              <p className="text-base font-medium text-text-main truncate">{c.title}</p>
-                            </div>
-                          </button>
-                        ))}
-                      </div>
-                    )}
-
-                    <button onClick={() => { navigate(`/search?q=${encodeURIComponent(mobileSearchQuery.trim())}`); setShowMobileSearch(false); setMobileSearchQuery(''); }} className="w-full p-4 text-center text-base font-medium text-primary hover:bg-primary/5 border-t border-border-main/10">
-                      {t('nav.searchSeeAll') || 'Ver todos los resultados'} →
-                    </button>
-                  </>
-                ) : mobileSearchQuery.trim().length >= 2 ? (
-                  <div className="flex items-center justify-center h-20 w-full text-sm font-bold text-text-muted">
-                    {t('nav.searchNoResults')}
-                  </div>
-                ) : (
-                  <div className="flex items-center justify-center h-20 w-full" />
-                )}
-              </div>
-            </motion.div>
-          </>
-        )}
-      </AnimatePresence>
+          <button onClick={onSeeAll} className="w-full p-3 text-center text-sm font-medium text-primary hover:bg-primary/5 border-t border-border-main/10">
+            {t('nav.searchSeeAll') || 'Ver todos los resultados'} →
+          </button>
+        </>
+      )}
+      {!isSearching && !hasResults && (
+        <div className="flex items-center justify-center h-10 w-full text-xs font-bold text-text-muted tracking-widest py-2">
+          {t('nav.searchNoResults')}
+        </div>
+      )}
     </div>
+  );
+}
+
+interface MobileSidebarSheetProps {
+  open: boolean;
+  theme: 'dark' | 'light';
+  activeTab?: 'for_you' | 'following' | 'trending' | 'top-judges';
+  activeUsers: { users: ActiveUser[]; total: number } | null;
+  currentUser: User | null;
+  t: TFunction;
+  onClose: () => void;
+}
+
+function MobileSidebarSheet({ open, theme, activeTab, activeUsers, currentUser, t, onClose }: Readonly<MobileSidebarSheetProps>) {
+  return (
+    <AnimatePresence>
+      {open && (
+        <>
+          <button type="button" tabIndex={-1} aria-label="Cerrar menú" className="fixed inset-0 z-[70] bg-black/60 lg:hidden cursor-default" onMouseDown={onClose} />
+          <motion.div initial={{ x: '-100%' }} animate={{ x: 0 }} exit={{ x: '-100%' }} transition={{ type: 'spring', damping: 25, stiffness: 300 }} className="fixed top-0 left-0 bottom-0 z-[80] w-80 bg-card border-r border-border-main/10 pt-4 lg:hidden overflow-y-auto">
+            <div className="flex items-center justify-between px-4 pb-4 border-b border-border-main/10">
+              <Link to="/" onClick={onClose}>
+                <img src={theme === 'dark' ? '/icons/eTribunal-logo-horizontal-bn.png' : '/icons/eTribunal-logo-horizontal.png'} alt="eTribunal" className="h-16 w-auto" />
+              </Link>
+              <button onClick={onClose} className="w-9 h-9 rounded-lg bg-border-main/10 flex items-center justify-center text-text-main">
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+
+            <div className="flex-1 overflow-y-auto p-4 space-y-6">
+              {activeUsers && activeUsers.total > 0 && (
+                <div className="bg-green-500/10 border border-green-500/20 rounded-2xl p-4">
+                  <div className="flex items-center gap-2 mb-3">
+                    <div className="w-2 h-2 bg-green-500 rounded-full animate-pulse" />
+                    <span className="text-xs font-black uppercase tracking-widest text-green-500">{t('sidebar.votingNow')}</span>
+                  </div>
+                  <div className="flex items-center justify-between">
+                    <div className="flex -space-x-3">
+                      {activeUsers.users.slice(0, 4).map((u) => (
+                        <img
+                          key={u.id}
+                          className="w-10 h-10 rounded-full ring-2 ring-card object-cover"
+                          src={u.is_anonymous ? getAnonymousAvatar(u.id) : (u.avatar_url || 'https://picsum.photos/seed/default/100/100')}
+                          alt={u.username}
+                          referrerPolicy="no-referrer"
+                        />
+                      ))}
+                      {activeUsers.total > 4 && (
+                        <div className="w-10 h-10 rounded-full ring-2 ring-card bg-border-main/50 flex items-center justify-center text-[10px] font-black text-text-muted">
+                          +{activeUsers.total - 4}
+                        </div>
+                      )}
+                    </div>
+                    <span className="text-xs font-medium text-text-muted">
+                      {activeUsers.total} {t('sidebar.activeUsers')}
+                    </span>
+                  </div>
+                </div>
+              )}
+
+              <div>
+                <div className="text-[10px] font-black uppercase tracking-widest text-text-muted mb-2 px-4">{t('nav.feed')}</div>
+                <nav className="space-y-1 rounded-2xl">
+                  <Link to="/" onClick={onClose} className={cn("flex items-center gap-4 px-4 py-3 rounded-2xl transition-all", activeTab === 'for_you' ? "bg-primary/10 text-primary" : "text-text-muted hover:bg-border-main/5 hover:text-text-main")}>
+                    <Home className="w-5 h-5" />
+                    <span className="text-sm font-black uppercase tracking-widest">{t('nav.feed')}</span>
+                  </Link>
+                  <Link to="/cases/following" onClick={onClose} className={cn("flex items-center gap-4 px-4 py-3 rounded-2xl transition-all", activeTab === 'following' ? "bg-primary/10 text-primary" : "text-text-muted hover:bg-border-main/5 hover:text-text-main")}>
+                    <UserIcon className="w-5 h-5" />
+                    <span className="text-sm font-black uppercase tracking-widest">{t('profile.following')}</span>
+                  </Link>
+                </nav>
+              </div>
+
+              <div>
+                <div className="text-[10px] font-black uppercase tracking-widest text-text-muted mb-2 px-4">{t('sidebar.discover')}</div>
+                <nav className="space-y-1 rounded-2xl">
+                  <Link to="/cases/trending" onClick={onClose} className="flex items-center gap-4 px-4 py-3 rounded-2xl text-text-muted hover:bg-border-main/5 hover:text-text-main transition-all">
+                    <TrendingUp className="w-5 h-5" />
+                    <span className="text-sm font-black uppercase tracking-widest">{t('sidebar.trending')}</span>
+                  </Link>
+                  <Link to="/top-judges" onClick={onClose} className="flex items-center gap-4 px-4 py-3 rounded-2xl text-text-muted hover:bg-border-main/5 hover:text-text-main transition-all">
+                    <UserIcon className="w-5 h-5" />
+                    <span className="text-sm font-black uppercase tracking-widest">{t('sidebar.topJudges')}</span>
+                  </Link>
+                </nav>
+              </div>
+
+              <div>
+                <div className="text-[10px] font-black uppercase tracking-widest text-text-muted mb-2 px-4">{t('layout.legal')}</div>
+                <nav className="space-y-1 rounded-2xl">
+                  <Link to="/legal/terms" onClick={onClose} className="flex items-center gap-4 px-4 py-3 rounded-2xl text-text-muted hover:bg-border-main/5 hover:text-text-main transition-all">
+                    <FileText className="w-5 h-5" />
+                    <span className="text-sm font-black uppercase tracking-widest">{t('layout.terms')}</span>
+                  </Link>
+                  <Link to="/legal/privacy" onClick={onClose} className="flex items-center gap-4 px-4 py-3 rounded-2xl text-text-muted hover:bg-border-main/5 hover:text-text-main transition-all">
+                    <Shield className="w-5 h-5" />
+                    <span className="text-sm font-black uppercase tracking-widest">{t('layout.privacy')}</span>
+                  </Link>
+                  <Link to="/legal/guidelines" onClick={onClose} className="flex items-center gap-4 px-4 py-3 rounded-2xl text-text-muted hover:bg-border-main/5 hover:text-text-main transition-all">
+                    <BookOpen className="w-5 h-5" />
+                    <span className="text-sm font-black uppercase tracking-widest">{t('layout.guidelines')}</span>
+                  </Link>
+                  <Link to="/legal/about" onClick={onClose} className="flex items-center gap-4 px-4 py-3 rounded-2xl text-text-muted hover:bg-border-main/5 hover:text-text-main transition-all">
+                    <Info className="w-5 h-5" />
+                    <span className="text-sm font-black uppercase tracking-widest">{t('layout.about')}</span>
+                  </Link>
+                </nav>
+              </div>
+
+              {currentUser ? (
+                <div>
+                  <div className="text-[10px] font-black uppercase tracking-widest text-text-muted mb-2 px-4">{t('layout.account')}</div>
+                  <nav className="space-y-1 rounded-2xl">
+                    <Link to="/settings" onClick={onClose} className="flex items-center gap-4 px-4 py-3 rounded-2xl text-text-muted hover:bg-border-main/5 hover:text-text-main transition-all">
+                      <Settings className="w-5 h-5" />
+                      <span className="text-sm font-black uppercase tracking-widest">{t('layout.settings')}</span>
+                    </Link>
+                  </nav>
+                </div>
+              ) : (
+                <div>
+                  <div className="text-[10px] font-black uppercase tracking-widest text-text-muted mb-2 px-4">{t('layout.account')}</div>
+                  <nav className="space-y-1 rounded-2xl">
+                    <Link to="/login" onClick={onClose} className="flex items-center gap-4 px-4 py-3 rounded-2xl bg-primary text-white hover:bg-primary/90 transition-all">
+                      <UserIcon className="w-5 h-5" />
+                      <span className="text-sm font-black uppercase tracking-widest">{t('nav.signIn')}</span>
+                    </Link>
+                  </nav>
+                </div>
+              )}
+
+              <div className="pt-6 border-t border-border-main/10">
+                <div className="text-center">
+                  <span className="text-[10px] text-text-muted">© 2026 eTribunal</span>
+                </div>
+              </div>
+            </div>
+          </motion.div>
+        </>
+      )}
+    </AnimatePresence>
+  );
+}
+
+interface MobileSearchOverlayProps {
+  open: boolean;
+  isSearching: boolean;
+  users: UserSearchResult[];
+  cases: CaseSearchResult[];
+  query: string;
+  t: TFunction;
+  onQueryChange: (value: string) => void;
+  onClose: () => void;
+  onSelectUser: (username: string) => void;
+  onSelectCase: (caseItem: CaseSearchResult) => void;
+  onSelectAll: () => void;
+}
+
+function MobileSearchOverlay({ open, isSearching, users, cases, query, t, onQueryChange, onClose, onSelectUser, onSelectCase, onSelectAll }: Readonly<MobileSearchOverlayProps>) {
+  const navigate = useNavigate();
+  const hasResults = users.length > 0 || cases.length > 0;
+
+  return (
+    <AnimatePresence>
+      {open && (
+        <>
+          <button type="button" tabIndex={-1} aria-label="Cerrar búsqueda" className="fixed inset-0 z-[65] bg-black/60 lg:hidden cursor-default" onMouseDown={onClose} />
+          <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} className="fixed inset-0 z-[70] bg-background lg:hidden flex flex-col">
+            <div className="p-4 pb-2 border-b border-border-main/10">
+              <button onClick={onClose} className="w-9 h-9 rounded-lg bg-border-main/10 flex items-center justify-center text-text-muted">
+                <ChevronLeft className="w-5 h-5" />
+              </button>
+            </div>
+            <div className="p-4 pt-2">
+              <div className="relative">
+                <Search className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-text-muted" />
+                <input
+                  type="text"
+                  placeholder={t('nav.searchPlaceholder')}
+                  autoFocus
+                  value={query}
+                  onChange={(e) => onQueryChange(e.target.value)}
+                  onKeyDown={(e) => {
+                    if (e.key === 'Enter' && query.trim()) {
+                      navigate(`/search?q=${encodeURIComponent(query.trim())}`);
+                      onClose();
+                    }
+                  }}
+                  className="w-full bg-card border border-border-main/10 rounded-xl pl-12 pr-4 py-4 text-base text-text-main placeholder:text-text-muted focus:outline-none focus:border-primary transition-all"
+                />
+              </div>
+            </div>
+
+            <div className="flex-1 overflow-y-auto">
+              {isSearching && (
+                <div className="flex items-center justify-center h-32 w-full">
+                  <Loader2 className="w-6 h-6 animate-spin text-primary" />
+                </div>
+              )}
+              {!isSearching && hasResults && (
+                <>
+                  {users.length > 0 && (
+                    <div className="p-2">
+                      <div className="flex items-center gap-2 px-3 py-1.5 text-xs font-bold text-text-muted">
+                        <UserIcon className="w-3 h-3" /> {t('cases.judges')}
+                      </div>
+                      {users.slice(0, 5).map((user) => (
+                        <button key={user.id} onClick={() => onSelectUser(user.username)} className="w-full flex items-center gap-3 px-3 py-2 hover:bg-primary/5 transition-colors text-left">
+                          <img src={user.avatar_url || `https://picsum.photos/seed/${user.id}/100/100`} alt="" className="w-10 h-10 rounded-full object-cover" />
+                          <div className="flex-1 min-w-0">
+                            <p className="text-base font-medium text-text-main">@{user.username}</p>
+                          </div>
+                        </button>
+                      ))}
+                    </div>
+                  )}
+
+                  {cases.length > 0 && (
+                    <div className={`p-2 ${users.length > 0 ? 'border-t border-border-main/10' : ''}`}>
+                      <div className="flex items-center gap-2 px-3 py-1.5 text-xs font-bold text-text-muted">
+                        <Gavel className="w-3 h-3" /> {t('cases.title')}
+                      </div>
+                      {cases.slice(0, 5).map((c) => (
+                        <button key={c.id} onClick={() => onSelectCase(c)} className="w-full flex items-center gap-3 px-3 py-2 hover:bg-primary/5 transition-colors text-left">
+                          <div className="w-10 h-10 rounded-lg bg-border-main/10 flex items-center justify-center">
+                            <Gavel className="w-4 h-4 text-text-muted" />
+                          </div>
+                          <div className="flex-1 min-w-0">
+                            <p className="text-base font-medium text-text-main truncate">{c.title}</p>
+                          </div>
+                        </button>
+                      ))}
+                    </div>
+                  )}
+
+                  <button onClick={onSelectAll} className="w-full p-4 text-center text-base font-medium text-primary hover:bg-primary/5 border-t border-border-main/10">
+                    {t('nav.searchSeeAll') || 'Ver todos los resultados'} →
+                  </button>
+                </>
+              )}
+              {!isSearching && !hasResults && query.trim().length >= 2 && (
+                <div className="flex items-center justify-center h-20 w-full text-sm font-bold text-text-muted">
+                  {t('nav.searchNoResults')}
+                </div>
+              )}
+              {!isSearching && !hasResults && query.trim().length < 2 && (
+                <div className="flex items-center justify-center h-20 w-full" />
+              )}
+            </div>
+          </motion.div>
+        </>
+      )}
+    </AnimatePresence>
   );
 }

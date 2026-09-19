@@ -12,7 +12,7 @@ interface ReactionIconProps {
 }
 
 const useTheme = () => {
-  const isDark = document.documentElement.getAttribute('data-theme') !== 'light';
+  const isDark = document.documentElement.dataset.theme !== 'light';
   return isDark;
 };
 

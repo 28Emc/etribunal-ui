@@ -5,7 +5,7 @@ export type Theme = 'dark' | 'light';
 export const useTheme = (): Theme => {
   const getTheme = useCallback((): Theme => {
     if (typeof document === 'undefined') return 'dark';
-    return document.documentElement.getAttribute('data-theme') === 'light' ? 'light' : 'dark';
+    return document.documentElement.dataset.theme === 'light' ? 'light' : 'dark';
   }, []);
 
   const [theme, setTheme] = useState<Theme>(getTheme);

@@ -43,6 +43,23 @@ export const UserCard: React.FC<UserCardProps> = ({
     onClick?.(username);
   };
 
+  let followButtonContent: React.ReactNode = (
+    <>
+      <UserPlus className="w-3 h-3" />
+      {t('profile.follow')}
+    </>
+  );
+  if (isLoading) {
+    followButtonContent = <Loader2 className="w-3 h-3 animate-spin" />;
+  } else if (isFollowing) {
+    followButtonContent = (
+      <>
+        <UserCheck className="w-3 h-3" />
+        {t('profile.following')}
+      </>
+    );
+  }
+
   return (
     <motion.div
       whileHover={{ x: 5 }}
@@ -85,19 +102,7 @@ export const UserCard: React.FC<UserCardProps> = ({
             : "bg-secondary/10 text-secondary hover:bg-secondary hover:text-white"
         )}
       >
-        {isLoading ? (
-          <Loader2 className="w-3 h-3 animate-spin" />
-        ) : isFollowing ? (
-          <>
-            <UserCheck className="w-3 h-3" />
-            {t('profile.following')}
-          </>
-        ) : (
-          <>
-            <UserPlus className="w-3 h-3" />
-            {t('profile.follow')}
-          </>
-        )}
+        {followButtonContent}
       </button>
     </motion.div>
   );

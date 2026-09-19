@@ -2,23 +2,24 @@ import React, { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
 import {
   Play, RefreshCw, Settings2, Activity, Cpu, ChevronDown,
-  Check, X, Zap, TrendingUp, Clock, ListChecks, Info, AlertTriangle,
+  Check, X, Zap, TrendingUp, Clock, ListChecks, Info,
 } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 import { cn } from '@utils/helpers';
 import { useAutomation } from '@hooks/useAutomation';
 import { SectionTitle } from '@components/ui/SectionTitle';
 import { PageLayout } from '@layout/PageLayout';
-import { SEO } from '@components/ui/SEO';
+import { Seo } from '@components/ui/SEO';
 import { LoadingState, EmptyState } from '@components/ui/LoadingState';
 import { useToast } from '@components/ui/Toast';
 import { Tooltip } from '@shared/components/Tooltip';
 import { ConfirmModal } from '@shared/components/ConfirmModal';
 import type {
   AutomationCasePerformance,
+  AutomationRun,
 } from '@api/automation';
 
-function StatusBadge({ status }: { status: string }) {
+function StatusBadge({ status }: Readonly<{ status: string }>) {
   const { t } = useTranslation();
   const colorMap: Record<string, string> = {
     COMPLETED: 'bg-emerald-500/15 text-emerald-400 border-emerald-500/30',
@@ -30,6 +31,16 @@ function StatusBadge({ status }: { status: string }) {
   };
   const key = `automation.runs.status.${status}`;
   const label = t(key, { defaultValue: status });
+
+  let dotClass = 'bg-current';
+  if (status === 'RUNNING') {
+    dotClass = 'bg-sky-400 animate-pulse';
+  } else if (status === 'COMPLETED') {
+    dotClass = 'bg-emerald-400';
+  } else if (status === 'FAILED') {
+    dotClass = 'bg-rose-400';
+  }
+
   return (
     <span
       className={cn(
@@ -38,16 +49,7 @@ function StatusBadge({ status }: { status: string }) {
       )}
     >
       <span
-        className={cn(
-          'w-1.5 h-1.5 rounded-full',
-          status === 'RUNNING'
-            ? 'bg-sky-400 animate-pulse'
-            : status === 'COMPLETED'
-            ? 'bg-emerald-400'
-            : status === 'FAILED'
-            ? 'bg-rose-400'
-            : 'bg-current'
-        )}
+        className={cn('w-1.5 h-1.5 rounded-full', dotClass)}
       />
       {label}
     </span>
@@ -60,13 +62,13 @@ function KpiCard({
   value,
   hint,
   tone = 'default',
-}: {
+}: Readonly<{
   icon: React.ElementType;
   label: string;
   value: React.ReactNode;
   hint?: React.ReactNode;
   tone?: 'default' | 'accent' | 'success' | 'warning';
-}) {
+}>) {
   const tones: Record<string, string> = {
     default: 'text-text-main',
     accent: 'text-sky-400',
@@ -95,11 +97,11 @@ function Toggle({
   checked,
   disabled,
   onChange,
-}: {
+}: Readonly<{
   checked: boolean;
   disabled?: boolean;
   onChange: (value: boolean) => void;
-}) {
+}>) {
   return (
     <button
       type="button"
@@ -141,7 +143,6 @@ export const AutomationPage: React.FC = () => {
 
   const [dirty, setDirty] = useState<Record<string, unknown>>({});
   const [showConfig, setShowConfig] = useState(false);
-  const [activeRunId, setActiveRunId] = useState<string | null>(null);
   const [confirmRun, setConfirmRun] = useState(false);
 
   useEffect(() => {
@@ -154,7 +155,7 @@ export const AutomationPage: React.FC = () => {
   if (!canManage) {
     return (
       <PageLayout title={t('automation.title')}>
-        <SEO title={t('automation.title')} />
+        <Seo title={t('automation.title')} />
         <div className="flex items-center justify-center h-full">
           <p className="text-text-muted text-sm px-6 text-center">
             {t('automation.accessDenied')}
@@ -193,7 +194,6 @@ export const AutomationPage: React.FC = () => {
           ? t('automation.toasts.runTriggeredDry')
           : t('automation.toasts.runTriggered')
       );
-      setActiveRunId(result.runId);
     }
   };
 
@@ -202,20 +202,14 @@ export const AutomationPage: React.FC = () => {
     const result = await triggerRun(false);
     if (result) {
       addToast('success', t('automation.toasts.runTriggered'));
-      setActiveRunId(result.runId);
     }
   };
 
   const handleOpenRun = async (id: string) => {
     await loadRun(id);
-    setActiveRunId(id);
   };
 
   const topCases: AutomationCasePerformance[] = engagement?.topCases || [];
-  const totalInteractionsDone = () => {
-    if (!runs || runs.length === 0) return 0;
-    return runs.reduce((acc, r) => acc + (r.casesCreated || 0), 0);
-  };
 
   const dryRunCasesCreated = () => {
     if (!runs || runs.length === 0) return 0;
@@ -316,7 +310,7 @@ export const AutomationPage: React.FC = () => {
       }}
       showBackButton={false}
     >
-      <SEO title={t('automation.title')} />
+      <Seo title={t('automation.title')} />
       <div className="px-6 py-6 space-y-8 max-w-5xl mx-auto">
         <div className="flex items-center gap-3">
           <span className="p-2.5 rounded-xl bg-sky-500/15">
@@ -502,45 +496,7 @@ export const AutomationPage: React.FC = () => {
             </AnimatePresence>
 
             {/* Engagement */}
-            <section>
-              <SectionTitle>{t('automation.engagement')}</SectionTitle>
-              {isLoadingEngagement && !engagement ? (
-                <LoadingState />
-              ) : topCases.length === 0 ? (
-                <EmptyState titleKey="automation.noEngagement" />
-              ) : (
-                <div className="bg-card border border-border-main/10 rounded-2xl overflow-hidden">
-                  <ul className="divide-y divide-border-main/10">
-                    {topCases.map((c) => (
-                      <li
-                        key={c.caseId}
-                        className="flex items-center gap-3 px-4 py-3 hover:bg-white/5"
-                      >
-                        <div className="flex-1 min-w-0">
-                          <p className="text-sm font-semibold text-text-main truncate">
-                            {c.title || c.caseId}
-                          </p>
-                          <p className="text-[11px] text-text-muted">
-                            {c.votes} {t('automation.metrics.votes')} ·{' '}
-                            {c.comments} {t('automation.metrics.comments')} ·{' '}
-                            {c.reactions} {t('automation.metrics.reactions')} ·{' '}
-                            {c.shares} {t('automation.metrics.shares')}
-                          </p>
-                        </div>
-                        <div className="text-right shrink-0">
-                          <p className="text-lg font-black text-emerald-400">
-                            {c.engagementScore}
-                          </p>
-                          <p className="text-[10px] text-text-muted uppercase tracking-wider">
-                            {t('automation.metrics.score')}
-                          </p>
-                        </div>
-                      </li>
-                    ))}
-                  </ul>
-                </div>
-              )}
-            </section>
+            <EngagementSection isLoading={isLoadingEngagement} topCases={topCases} />
 
             {/* Queue */}
             <section>
@@ -576,112 +532,14 @@ export const AutomationPage: React.FC = () => {
             </section>
 
             {/* Run history */}
-            <section>
-              <SectionTitle>{t('automation.history')}</SectionTitle>
-              {isLoadingRuns && !runs.length ? (
-                <LoadingState />
-              ) : runs.length === 0 ? (
-                <EmptyState titleKey="automation.noRuns" />
-              ) : (
-                <div className="bg-card border border-border-main/10 rounded-2xl overflow-hidden">
-                  <ul className="divide-y divide-border-main/10">
-                    {runs.map((run) => (
-                      <li
-                        key={run.id}
-                        className="px-4 py-3 hover:bg-white/5 cursor-pointer"
-                        onClick={() => handleOpenRun(run.id)}
-                      >
-                        <div className="flex items-center justify-between gap-3">
-                          <div className="flex items-center gap-3 min-w-0">
-                            <div className="flex-1 min-w-0">
-                              <p className="text-sm font-semibold text-text-main truncate">
-                                {String(run.id).slice(0, 8)}
-                                {run.dryRun && (
-                                  <span className="ml-2 text-[10px] font-bold text-amber-400 uppercase bg-amber-500/10 border border-amber-500/30 px-1.5 py-0.5 rounded-full">
-                                    dry
-                                  </span>
-                                )}
-                              </p>
-                              <p className="text-[11px] text-text-muted">
-                                {run.casesCreated}/{run.casesRequested}{' '}
-                                {t('automation.metrics.cases')} ·{' '}
-                                {formatWhen(run.startedAt)}
-                              </p>
-                            </div>
-                          </div>
-                          <div className="flex items-center gap-2 shrink-0">
-                            <StatusBadge status={run.status} />
-                            <ChevronDown className="w-4 h-4 text-text-muted" />
-                          </div>
-                        </div>
-                      </li>
-                    ))}
-                  </ul>
-                </div>
-              )}
-            </section>
+            <RunHistorySection
+              isLoading={isLoadingRuns}
+              runs={runs}
+              onOpenRun={handleOpenRun}
+            />
 
             {/* Run detail */}
-            <AnimatePresence>
-              {runDetail && (
-                <motion.div
-                  initial={{ opacity: 0 }}
-                  animate={{ opacity: 1 }}
-                  exit={{ opacity: 0 }}
-                  className="fixed inset-0 z-50 bg-black/70 flex items-end md:items-center justify-center"
-                  onClick={() => {
-                    setActiveRunId(null);
-                    clearRunDetail();
-                  }}
-                >
-                  <motion.div
-                    initial={{ y: 40, opacity: 0 }}
-                    animate={{ y: 0, opacity: 1 }}
-                    exit={{ y: 40, opacity: 0 }}
-                    onClick={(e) => e.stopPropagation()}
-                    className="bg-card border border-border-main/10 rounded-t-2xl md:rounded-2xl w-full max-w-lg max-h-[80vh] overflow-y-auto p-6"
-                  >
-                    <div className="flex items-center justify-between mb-4">
-                      <h3 className="text-base font-black text-text-main uppercase tracking-wider">
-                        {t('automation.runDetail')}
-                      </h3>
-                      <button
-                        type="button"
-                        onClick={() => {
-                          setActiveRunId(null);
-                          clearRunDetail();
-                        }}
-                        className="p-1.5 rounded-full hover:bg-white/10 text-text-muted"
-                      >
-                        <X className="w-5 h-5" />
-                      </button>
-                    </div>
-                    <div className="space-y-3 text-sm">
-                      <div className="flex items-center justify-between">
-                        <span className="text-text-muted">{t('automation.runs.status.status')}</span>
-                        <StatusBadge status={runDetail.status} />
-                      </div>
-                      <StatRow label={t('automation.metrics.casesRequested')} value={runDetail.casesRequested} />
-                      <StatRow label={t('automation.metrics.casesCreated')} value={runDetail.casesCreated} />
-                      <StatRow label={t('automation.metrics.casesFailed')} value={runDetail.casesFailed} />
-                      <StatRow
-                        label={t('automation.metrics.startedAt')}
-                        value={formatWhen(runDetail.startedAt)}
-                      />
-                      <StatRow
-                        label={t('automation.metrics.finishedAt')}
-                        value={formatWhen(runDetail.finishedAt)}
-                      />
-                      {runDetail.errorMessage && (
-                        <div className="bg-rose-500/10 border border-rose-500/30 rounded-xl p-3 text-rose-300">
-                          {runDetail.errorMessage}
-                        </div>
-                      )}
-                    </div>
-                  </motion.div>
-                </motion.div>
-              )}
-</AnimatePresence>
+            <RunDetailModal run={runDetail} onClose={clearRunDetail} />
            </>
          )}
        </div>
@@ -700,12 +558,185 @@ export const AutomationPage: React.FC = () => {
    );
  };
 
-function StatRow({ label, value }: { label: string; value: string | number }) {
+function StatRow({ label, value }: Readonly<{ label: string; value: string | number }>) {
   return (
     <div className="flex items-center justify-between">
       <span className="text-text-muted">{label}</span>
       <span className="font-semibold text-text-main">{value}</span>
     </div>
+  );
+}
+
+interface EngagementSectionProps {
+  isLoading: boolean;
+  topCases: AutomationCasePerformance[];
+}
+
+function EngagementSection({ isLoading, topCases }: Readonly<EngagementSectionProps>) {
+  const { t } = useTranslation();
+  return (
+    <section>
+      <SectionTitle>{t('automation.engagement')}</SectionTitle>
+      {isLoading && !topCases.length && <LoadingState />}
+      {!isLoading && topCases.length === 0 && (
+        <EmptyState titleKey="automation.noEngagement" />
+      )}
+      {!isLoading && topCases.length > 0 && (
+        <div className="bg-card border border-border-main/10 rounded-2xl overflow-hidden">
+          <ul className="divide-y divide-border-main/10">
+            {topCases.map((c) => (
+              <li
+                key={c.caseId}
+                className="flex items-center gap-3 px-4 py-3 hover:bg-white/5"
+              >
+                <div className="flex-1 min-w-0">
+                  <p className="text-sm font-semibold text-text-main truncate">
+                    {c.title || c.caseId}
+                  </p>
+                  <p className="text-[11px] text-text-muted">
+                    {c.votes} {t('automation.metrics.votes')} ·{' '}
+                    {c.comments} {t('automation.metrics.comments')} ·{' '}
+                    {c.reactions} {t('automation.metrics.reactions')} ·{' '}
+                    {c.shares} {t('automation.metrics.shares')}
+                  </p>
+                </div>
+                <div className="text-right shrink-0">
+                  <p className="text-lg font-black text-emerald-400">
+                    {c.engagementScore}
+                  </p>
+                  <p className="text-[10px] text-text-muted uppercase tracking-wider">
+                    {t('automation.metrics.score')}
+                  </p>
+                </div>
+              </li>
+            ))}
+          </ul>
+        </div>
+      )}
+    </section>
+  );
+}
+
+interface RunHistorySectionProps {
+  isLoading: boolean;
+  runs: AutomationRun[];
+  onOpenRun: (id: string) => void;
+}
+
+function RunHistorySection({ isLoading, runs, onOpenRun }: Readonly<RunHistorySectionProps>) {
+  const { t } = useTranslation();
+  return (
+    <section>
+      <SectionTitle>{t('automation.history')}</SectionTitle>
+      {isLoading && !runs.length && <LoadingState />}
+      {!isLoading && runs.length === 0 && (
+        <EmptyState titleKey="automation.noRuns" />
+      )}
+      {!isLoading && runs.length > 0 && (
+        <div className="bg-card border border-border-main/10 rounded-2xl overflow-hidden">
+          <ul className="divide-y divide-border-main/10">
+            {runs.map((run) => (
+              <li key={run.id}>
+                <button
+                  type="button"
+                  onClick={() => onOpenRun(run.id)}
+                  className="w-full text-left px-4 py-3 hover:bg-white/5 cursor-pointer"
+                >
+                  <div className="flex items-center justify-between gap-3">
+                    <div className="flex items-center gap-3 min-w-0">
+                      <div className="flex-1 min-w-0">
+                        <p className="text-sm font-semibold text-text-main truncate">
+                          {String(run.id).slice(0, 8)}
+                          {run.dryRun && (
+                            <span className="ml-2 text-[10px] font-bold text-amber-400 uppercase bg-amber-500/10 border border-amber-500/30 px-1.5 py-0.5 rounded-full">
+                              dry
+                            </span>
+                          )}
+                        </p>
+                        <p className="text-[11px] text-text-muted">
+                          {run.casesCreated}/{run.casesRequested}{' '}
+                          {t('automation.metrics.cases')} ·{' '}
+                          {formatWhen(run.startedAt)}
+                        </p>
+                      </div>
+                    </div>
+                    <div className="flex items-center gap-2 shrink-0">
+                      <StatusBadge status={run.status} />
+                      <ChevronDown className="w-4 h-4 text-text-muted" />
+                    </div>
+                  </div>
+                </button>
+              </li>
+            ))}
+          </ul>
+        </div>
+      )}
+    </section>
+  );
+}
+
+interface RunDetailModalProps {
+  run: AutomationRun | null;
+  onClose: () => void;
+}
+
+function RunDetailModal({ run, onClose }: Readonly<RunDetailModalProps>) {
+  const { t } = useTranslation();
+  return (
+    <AnimatePresence>
+      {run && (
+        <motion.div
+          initial={{ opacity: 0 }}
+          animate={{ opacity: 1 }}
+          exit={{ opacity: 0 }}
+          className="fixed inset-0 z-50 bg-black/70 flex items-end md:items-center justify-center"
+          onClick={onClose}
+        >
+          <motion.div
+            initial={{ y: 40, opacity: 0 }}
+            animate={{ y: 0, opacity: 1 }}
+            exit={{ y: 40, opacity: 0 }}
+            onClick={(e) => e.stopPropagation()}
+            className="bg-card border border-border-main/10 rounded-t-2xl md:rounded-2xl w-full max-w-lg max-h-[80vh] overflow-y-auto p-6"
+          >
+            <div className="flex items-center justify-between mb-4">
+              <h3 className="text-base font-black text-text-main uppercase tracking-wider">
+                {t('automation.runDetail')}
+              </h3>
+              <button
+                type="button"
+                onClick={onClose}
+                className="p-1.5 rounded-full hover:bg-white/10 text-text-muted"
+              >
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+            <div className="space-y-3 text-sm">
+              <div className="flex items-center justify-between">
+                <span className="text-text-muted">{t('automation.runs.status.status')}</span>
+                <StatusBadge status={run.status} />
+              </div>
+              <StatRow label={t('automation.metrics.casesRequested')} value={run.casesRequested} />
+              <StatRow label={t('automation.metrics.casesCreated')} value={run.casesCreated} />
+              <StatRow label={t('automation.metrics.casesFailed')} value={run.casesFailed} />
+              <StatRow
+                label={t('automation.metrics.startedAt')}
+                value={formatWhen(run.startedAt)}
+              />
+              <StatRow
+                label={t('automation.metrics.finishedAt')}
+                value={formatWhen(run.finishedAt)}
+              />
+              {run.errorMessage && (
+                <div className="bg-rose-500/10 border border-rose-500/30 rounded-xl p-3 text-rose-300">
+                  {run.errorMessage}
+                </div>
+              )}
+            </div>
+          </motion.div>
+        </motion.div>
+      )}
+    </AnimatePresence>
   );
 }
 
