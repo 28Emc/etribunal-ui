@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { useNavigate, Outlet, type Location, Link } from 'react-router-dom';
 import { Cpu, Users, Shield, BarChart, Settings, ChevronLeft, X, RotateCcw } from 'lucide-react';
@@ -29,11 +29,7 @@ export const AdminLayoutContent = ({ collapsed, onCollapseChange, location }: Ad
   const theme = useTheme();
 
   const [mobileOpen, setMobileOpen] = useState(false);
-  const [mounted, setMounted] = useState(false);
-
-  useEffect(() => {
-    setMounted(true);
-  }, []);
+  const [mounted] = useState(() => typeof window !== 'undefined');
 
   const isActive = (path: string) => location.pathname === path || location.pathname.startsWith(path + '/');
 

@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect, useCallback, useMemo } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { Settings, LogOut, Users, UserX, BookmarkCheck, Gavel, History, Share2, X } from 'lucide-react';
@@ -87,9 +87,9 @@ export const ProfilePage: React.FC = () => {
     { skip: !isOwnProfile }
   );
 
-  const createdCases = createdQuery.data?.cases ?? [];
-  const savedCases = savedQuery.data?.cases ?? [];
-  const votedCases = votedQuery.data?.cases ?? [];
+  const createdCases = useMemo(() => createdQuery.data?.cases ?? [], [createdQuery.data?.cases]);
+  const savedCases = useMemo(() => savedQuery.data?.cases ?? [], [savedQuery.data?.cases]);
+  const votedCases = useMemo(() => votedQuery.data?.cases ?? [], [votedQuery.data?.cases]);
   const hasMoreCreated = createdQuery.data ? createdQuery.data.hasMore : true;
   const hasMoreSaved = savedQuery.data ? savedQuery.data.hasMore : true;
   const hasMoreVoted = votedQuery.data ? votedQuery.data.hasMore : true;
@@ -102,17 +102,16 @@ export const ProfilePage: React.FC = () => {
     loadingSavedCases = votedQuery.isFetching;
   }
 
-  useEffect(() => {
-    if (targetUsername) {
-      fetchProfile();
-    }
+  const [prevUsername, setPrevUsername] = useState(targetUsername);
+  if (prevUsername !== targetUsername) {
+    setPrevUsername(targetUsername);
+    setLoading(true);
     setSkipCreated(0);
     setSkipSaved(0);
     setSkipVoted(0);
-  }, [targetUsername, isOwnProfile]);
+  }
 
-  const fetchProfile = async () => {
-    setLoading(true);
+  const fetchProfile = useCallback(async () => {
     try {
       const data = await apiClient.get<any>(`/users/${targetUsername}`);
       const mapped: User = {
@@ -136,7 +135,13 @@ export const ProfilePage: React.FC = () => {
     } finally {
       setLoading(false);
     }
-  };
+  }, [targetUsername, isOwnProfile, currentUser?.avatar]);
+
+  useEffect(() => {
+    if (targetUsername) {
+      fetchProfile();
+    }
+  }, [targetUsername, fetchProfile]);
 
   const handleFollowToggle = async () => {
     if (!currentUser) {
@@ -316,8 +321,8 @@ export const ProfilePage: React.FC = () => {
 
   const handleShareOpen = useCallback((caseId: string) => {
     const c = createdCases.find(item => item.id === caseId) ||
-             savedCases.find(item => item.id === caseId) ||
-             votedCases.find(item => item.id === caseId);
+      savedCases.find(item => item.id === caseId) ||
+      votedCases.find(item => item.id === caseId);
     if (c) {
       setShareData({ type: 'case', id: c.id, title: c.title, username: c.sideA?.username });
       setShowShareModal(true);
@@ -368,7 +373,7 @@ export const ProfilePage: React.FC = () => {
         tooltip: t('share.shareThis')
       }}
     >
-      <Seo 
+      <Seo
         title={displayUser?.username || targetUsername || ''}
         description={`Perfil de ${displayUser?.username || targetUsername || ''} en eTRIBUNAL`}
         image={displayUser?.avatar || undefined}
@@ -633,12 +638,12 @@ export const ProfilePage: React.FC = () => {
                   savedCasesTab !== 'created' &&
                   !(savedCasesTab === 'saved' && isOwnProfile) &&
                   !(savedCasesTab === 'voted' && isOwnProfile) && (
-                  <div className="py-12 text-center bg-card border border-border-main/10 rounded-[32px]">
-                    <p className="text-[10px] font-black text-text-muted uppercase tracking-widest italic opacity-40">
-                      {isOwnProfile ? t('profile.noCasesYet') : t('profile.noOpenCases')}
-                    </p>
-                  </div>
-                )}
+                    <div className="py-12 text-center bg-card border border-border-main/10 rounded-[32px]">
+                      <p className="text-[10px] font-black text-text-muted uppercase tracking-widest italic opacity-40">
+                        {isOwnProfile ? t('profile.noCasesYet') : t('profile.noOpenCases')}
+                      </p>
+                    </div>
+                  )}
               </div>
             </section>
 

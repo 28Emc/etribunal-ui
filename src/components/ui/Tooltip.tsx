@@ -20,16 +20,12 @@ export const Tooltip: React.FC<TooltipProps> = ({
 }) => {
   const [isVisible, setIsVisible] = useState(false);
   const [style, setStyle] = useState<{ top: number; left: number } | null>(null);
-  const [isTouchDevice, setIsTouchDevice] = useState(false);
+  const [isTouchDevice] = useState(() => typeof window !== 'undefined' && ('ontouchstart' in window || navigator.maxTouchPoints > 0));
   const triggerRef = useRef<HTMLDivElement>(null);
   const tooltipRef = useRef<HTMLDivElement>(null);
   const showTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
-  useEffect(() => {
-    setIsTouchDevice('ontouchstart' in window || navigator.maxTouchPoints > 0);
-  }, []);
-
-  const updatePosition = () => {
+  const updatePosition = useCallback(() => {
     if (!triggerRef.current) return;
     
     const rect = triggerRef.current.getBoundingClientRect();
@@ -65,7 +61,7 @@ export const Tooltip: React.FC<TooltipProps> = ({
     top = Math.max(padding, Math.min(top, window.innerHeight - tooltipHeight - padding));
 
     setStyle({ top, left });
-  };
+  }, [position]);
 
   const showTooltip = useCallback(() => {
     if (showTimeoutRef.current) {
@@ -135,7 +131,7 @@ export const Tooltip: React.FC<TooltipProps> = ({
         window.removeEventListener('scroll', handleScroll, true);
       };
     }
-  }, [isVisible, position]);
+  }, [isVisible, updatePosition]);
 
   const tooltipContent = (
     <AnimatePresence>

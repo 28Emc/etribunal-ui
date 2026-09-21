@@ -55,21 +55,7 @@ export function MainLayout({ children, activeTab = 'for_you' }: Readonly<MainLay
   const [showMobileSearch, setShowMobileSearch] = useState(false);
   const [mobileSearchQuery, setMobileSearchQuery] = useState('');
   const [activeUsers, setActiveUsers] = useState<{ users: Array<{ id: string; username: string; avatar_url: string | null; is_anonymous: boolean }>; total: number } | null>(null);
-  const [isLoadingActiveUsers, setIsLoadingActiveUsers] = useState(false);
-
-  const fetchActiveUsers = async () => {
-    setIsLoadingActiveUsers(true);
-    try {
-      const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:3001/api';
-      const response = await fetch(`${API_URL}/cases/active-users`);
-      const json = await response.json().catch(() => ({}));
-      setActiveUsers(json.data ?? json);
-    } catch (error) {
-      console.error('Error fetching active users:', error);
-    } finally {
-      setIsLoadingActiveUsers(false);
-    }
-  };
+  const [isLoadingActiveUsers, setIsLoadingActiveUsers] = useState(true);
 
   useEffect(() => {
     document.documentElement.dataset.theme = theme;
@@ -80,10 +66,29 @@ export function MainLayout({ children, activeTab = 'for_you' }: Readonly<MainLay
     if (currentUser) {
       fetchUnreadCount();
     }
-  }, [currentUser]);
+  }, [currentUser, fetchUnreadCount]);
 
   useEffect(() => {
-    fetchActiveUsers();
+    let active = true;
+    const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:3001/api';
+    fetch(`${API_URL}/cases/active-users`)
+      .then((res) => res.json().catch(() => ({})))
+      .then((json) => {
+        if (active) {
+          setActiveUsers(json.data ?? json);
+          setIsLoadingActiveUsers(false);
+        }
+      })
+      .catch((error) => {
+        if (active) {
+          console.error('Error fetching active users:', error);
+          setIsLoadingActiveUsers(false);
+        }
+      });
+
+    return () => {
+      active = false;
+    };
   }, []);
 
   useEffect(() => {

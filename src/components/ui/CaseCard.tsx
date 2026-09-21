@@ -18,11 +18,9 @@ interface CaseCardProps {
   userVote?: 'A' | 'B' | 'BOTH_WRONG' | null;
   onVote?: (caseId: string, side: 'A' | 'B' | 'BothWrong') => Promise<void>;
   isSaved?: boolean;
-  isShared?: boolean;
   anchorsCount?: number;
   sharesCount?: number;
   onToggleSave?: (caseId: string) => Promise<void>;
-  onToggleShare?: (caseId: string) => Promise<void>;
   reactions?: { LIKE: number; LOVE: number; ANGRY: number };
   userReaction?: string | null;
   onReaction?: (caseId: string, emoji: 'LIKE' | 'LOVE' | 'ANGRY') => Promise<void>;
@@ -30,7 +28,6 @@ interface CaseCardProps {
   commentsCount?: number;
   isVotingThis?: boolean;
   isSavingThis?: boolean;
-  isSharingThis?: boolean;
   isReactingThis?: boolean;
   onOpenAuth?: () => void;
 }
@@ -43,11 +40,9 @@ const CaseCardComponent: React.FC<CaseCardProps> = ({
   userVote,
   onVote,
   isSaved = false,
-  isShared = false,
   anchorsCount = 0,
   sharesCount = 0,
   onToggleSave,
-  onToggleShare,
   reactions = { LIKE: 0, LOVE: 0, ANGRY: 0 },
   userReaction,
   onReaction,
@@ -55,7 +50,6 @@ const CaseCardComponent: React.FC<CaseCardProps> = ({
   commentsCount = 0,
   isVotingThis = false,
   isSavingThis = false,
-  isSharingThis = false,
   isReactingThis = false,
   onShare,
   onOpenAuth,
@@ -189,7 +183,7 @@ const CaseCardComponent: React.FC<CaseCardProps> = ({
     joinVotingText = t('caseCard.joinDebate');
   }
 
-  let evidenceContent: React.ReactNode = null;
+  let evidenceContent: React.ReactNode;
   if (caseData.type === 'classic') {
     evidenceContent = (
       <div className="relative h-full">
@@ -263,7 +257,7 @@ const CaseCardComponent: React.FC<CaseCardProps> = ({
         <div className="flex items-center mb-4 min-h-[32px]">
           {caseData.type === 'vote' ? (
             <div className="flex items-center w-full">
-              <button type="button" className="flex-1 flex items-center gap-2 cursor-pointer min-w-0 text-left" onClick={(e) => { e.stopPropagation(); !caseData.sideA.isAnonymous && onViewProfile?.(caseData.sideA.name); }}>
+              <button type="button" className="flex-1 flex items-center gap-2 cursor-pointer min-w-0 text-left" onClick={(e) => { e.stopPropagation(); if (!caseData.sideA.isAnonymous) { onViewProfile?.(caseData.sideA.name); } }}>
                 <img
                   src={caseData.sideA.avatar}
                   alt=""
@@ -274,7 +268,7 @@ const CaseCardComponent: React.FC<CaseCardProps> = ({
                 <p className="text-[10px] font-black text-text-main uppercase tracking-tight truncate">{caseData.sideA.name}</p>
               </button>
               <img src="/versus_color_nobg.png" alt="VS" className="w-24 h-24 object-contain shrink-0 z-10 relative drop-shadow-[0_0_6px_rgba(51,102,153,0.2)]" />
-              <button type="button" className="flex-1 flex items-center gap-2 cursor-pointer justify-end min-w-0 text-left" onClick={(e) => { e.stopPropagation(); caseData.sideB.name !== 'Waiting...' && !caseData.sideB.isAnonymous && onViewProfile?.(caseData.sideB.name); }}>
+              <button type="button" className="flex-1 flex items-center gap-2 cursor-pointer justify-end min-w-0 text-left" onClick={(e) => { e.stopPropagation(); if (caseData.sideB.name !== 'Waiting...' && !caseData.sideB.isAnonymous) { onViewProfile?.(caseData.sideB.name); } }}>
                 <p className={cn("text-[10px] font-black uppercase tracking-tight truncate", caseData.status === 'WAITING' ? "text-text-muted italic" : "text-text-main")}>
                   {caseData.status === 'WAITING' ? t('cases.awaitingSideB') : caseData.sideB.name}
                 </p>
@@ -288,7 +282,7 @@ const CaseCardComponent: React.FC<CaseCardProps> = ({
               </button>
             </div>
           ) : (
-            <button type="button" className="flex items-center gap-2 cursor-pointer text-left" onClick={(e) => { e.stopPropagation(); !caseData.sideA.isAnonymous && onViewProfile?.(caseData.sideA.name); }}>
+            <button type="button" className="flex items-center gap-2 cursor-pointer text-left" onClick={(e) => { e.stopPropagation(); if (!caseData.sideA.isAnonymous) { onViewProfile?.(caseData.sideA.name); } }}>
               <img
                 src={caseData.sideA.avatar}
                 alt=""

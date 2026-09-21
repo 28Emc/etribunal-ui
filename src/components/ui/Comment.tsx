@@ -177,13 +177,13 @@ function CommentActions({
 
 export function Comment({
   comment,
-  isTop = false,
+  isTop: _isTop = false,
   highlightId,
   onReply,
   onLike,
   onDelete,
   onReaction,
-  onShare,
+  onShare: _onShare,
   onUserClick,
   isReacting = false,
   isDeleting = false,
@@ -198,7 +198,11 @@ export function Comment({
     showTranslation: showCommentTranslation,
     setTranslatedComment,
   } = useContentTranslation();
-  const [showReplies, setShowReplies] = useState(false);
+  // Inicializar con lazy initializer en lugar de useEffect + setState
+  // Esto evita el render extra innecesario (react-hooks/set-state-in-effect)
+  const [showReplies, setShowReplies] = useState(
+    () => highlightId === comment.id && commentHasReplies(comment)
+  );
   const [collapsed, setCollapsed] = useState(false);
 
   const currentLocale = i18n.language?.split('-')[0] || 'es';
@@ -207,12 +211,6 @@ export function Comment({
   const replies = comment.replies || [];
   const hasReplies = commentHasReplies(comment);
   const isHighlighted = highlightId === comment.id;
-
-  useEffect(() => {
-    if (highlightId === comment.id && hasReplies) {
-      setShowReplies(true);
-    }
-  }, [highlightId, comment.id, hasReplies]);
 
   const MAX_REPLY_DEPTH = 3;
   const MAX_SHOW_REPLIES_DEPTH = 2;

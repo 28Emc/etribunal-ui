@@ -17,7 +17,6 @@ interface ReactionBarProps {
   isReacting?: boolean;
   size?: 'sm' | 'md';
   className?: string;
-  onReactionClick?: () => void;
 }
 
 interface ReactionConfig {
@@ -183,7 +182,6 @@ const ReactionBarComponent: React.FC<ReactionBarProps> = ({
   isReacting = false,
   size = 'md',
   className,
-  onReactionClick,
 }) => {
   const { t } = useTranslation();
   const isDark = document.documentElement.dataset.theme !== 'light';
@@ -195,44 +193,44 @@ const ReactionBarComponent: React.FC<ReactionBarProps> = ({
 
   const reactionConfig = getReactionConfig(isDark);
 
-const isSmall = size === 'sm';
+  const isSmall = size === 'sm';
+  const [prevReactions, setPrevReactions] = useState(reactions);
   const [localReactions, setLocalReactions] = useState(reactions);
+  if (prevReactions !== reactions) {
+    setPrevReactions(reactions);
+    setLocalReactions(reactions);
+  }
+
+  const [prevUserReaction, setPrevUserReaction] = useState(userReaction);
   const [localUserReaction, setLocalUserReaction] = useState(userReaction);
+  if (prevUserReaction !== userReaction) {
+    setPrevUserReaction(userReaction);
+    setLocalUserReaction(userReaction);
+  }
+
   const totalReactions = (localReactions.LIKE || 0) + (localReactions.LOVE || 0) + (localReactions.ANGRY || 0);
   const [justReacted, setJustReacted] = useState(false);
-  
-  useEffect(() => {
-    setLocalReactions(reactions);
-  }, [reactions]);
-
-  useEffect(() => {
-    setLocalUserReaction(userReaction);
-  }, [userReaction]);
-
-  useEffect(() => {
-    if (localUserReaction && !justReacted) {
-      setJustReacted(true);
-      const timer = setTimeout(() => setJustReacted(false), 600);
-      return () => clearTimeout(timer);
-    }
-  }, [localUserReaction]);
 
   const currentReaction = localUserReaction ? reactionConfig.find(r => r.type === localUserReaction) : null;
   const CurrentIcon = currentReaction?.icon || ThumbsUp;
 
   const handleReactionWithLocal = (type: ReactionType) => {
+    setJustReacted(true);
+    setTimeout(() => setJustReacted(false), 600);
+
     const isSameReaction = localUserReaction === type;
     
-    setLocalReactions(prev => {
+    setLocalReactions((prev) => {
       const newReactions = { ...prev };
       if (isSameReaction) {
-        newReactions[type as keyof typeof newReactions] = Math.max(0, ((prev as any)[type] || 0) - 1) as any;
+        newReactions[type] = Math.max(0, (prev[type] ?? 0) - 1);
         setLocalUserReaction(null);
       } else {
         if (localUserReaction) {
-          newReactions[localUserReaction as keyof typeof newReactions] = Math.max(0, ((prev as any)[localUserReaction] || 0) - 1) as any;
+          const prevKey = localUserReaction as ReactionType;
+          newReactions[prevKey] = Math.max(0, (prev[prevKey] ?? 0) - 1);
         }
-        (newReactions as any)[type] = ((prev as any)[type] || 0) + 1;
+        newReactions[type] = (prev[type] ?? 0) + 1;
         setLocalUserReaction(type);
       }
       return newReactions;

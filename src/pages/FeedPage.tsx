@@ -43,11 +43,17 @@ export function FeedPage({ initialTab = 'for_you' }: Readonly<FeedPageProps>) {
   const [addComment] = useAddCommentMutation();
   const { addToast } = useToast();
 
-  const showToast = (msg: string, type: 'success' | 'error' | 'info' | 'warning') => addToast(type, msg);
+  const showToast = React.useCallback((msg: string, type: 'success' | 'error' | 'info' | 'warning') => addToast(type, msg), [addToast]);
 
-  const [activeTab, setActiveTab] = useState<FeedTabExtended>(initialTab);
-  const [selectedCategory, setSelectedCategory] = useState('All');
   const [skip, setSkip] = useState(0);
+  const [activeTab, setActiveTab] = useState<FeedTabExtended>(initialTab);
+  const [prevInitialTab, setPrevInitialTab] = useState(initialTab);
+  if (prevInitialTab !== initialTab) {
+    setPrevInitialTab(initialTab);
+    setActiveTab(initialTab);
+    setSkip(0);
+  }
+  const [selectedCategory, setSelectedCategory] = useState('All');
 
   const [inviteNotice, setInviteNotice] = useState<string | null>(null);
   const [showShareModal, setShowShareModal] = useState(false);
@@ -68,7 +74,7 @@ export function FeedPage({ initialTab = 'for_you' }: Readonly<FeedPageProps>) {
     skip,
   };
   const { data, isLoading, isFetching, refetch } = useGetFeedQuery(feedArgs, { skip: isTopJudges });
-  const cases = data?.cases ?? [];
+  const cases = React.useMemo(() => data?.cases ?? [], [data?.cases]);
   const hasMore = data?.hasMore ?? false;
 
   const [voteCase, { isLoading: isVotePending }] = useVoteCaseMutation();
@@ -91,26 +97,16 @@ export function FeedPage({ initialTab = 'for_you' }: Readonly<FeedPageProps>) {
     }
   }, [feedLoaded]);
 
-  const saveFeedScroll = () => {
+  const saveFeedScroll = React.useCallback(() => {
     if (feedScrollRef.current) {
       sessionStorage.setItem(FEED_SCROLL_KEY, String(feedScrollRef.current.scrollTop));
     }
-  };
-
-  useEffect(() => {
-    setActiveTab(initialTab);
-    setSkip(0);
-  }, [initialTab]);
+  }, []);
 
   const { data: topJudges, isLoading: isLoadingTopJudges } = useGetTopJudgesQuery(undefined, {
     skip: !isTopJudges,
   });
   const [followUser] = useFollowUserMutation();
-
-  useEffect(() => {
-    setActiveTab(initialTab);
-    setSkip(0);
-  }, [initialTab]);
 
   const handleLoadMore = React.useCallback(() => {
     if (!hasMore || isFetching) return;
@@ -128,9 +124,9 @@ export function FeedPage({ initialTab = 'for_you' }: Readonly<FeedPageProps>) {
     isLoading: isFetching,
   });
 
-  const openAuthModal = () => {
+  const openAuthModal = React.useCallback(() => {
     navigate('/login');
-  };
+  }, [navigate]);
 
   const handleSelectCase = React.useCallback((caseData: Case | string) => {
     if (typeof caseData === 'string' && (caseData === 'trending' || caseData === 'top-judges')) {
@@ -175,7 +171,7 @@ export function FeedPage({ initialTab = 'for_you' }: Readonly<FeedPageProps>) {
     } catch (error) {
       console.error('Error voting:', error);
     }
-  }, [currentUser, voteCase, setCurrentUser]);
+  }, [currentUser, voteCase, setCurrentUser, openAuthModal]);
 
   const handleToggleSave = React.useCallback(async (caseId: string) => {
     if (!currentUser) {
@@ -193,7 +189,7 @@ export function FeedPage({ initialTab = 'for_you' }: Readonly<FeedPageProps>) {
       console.error('Error toggling save:', error);
       showToast(t('toasts.errorProcessingAnchor'), 'error');
     }
-  }, [currentUser, cases, saveCase, t]);
+  }, [currentUser, cases, saveCase, t, openAuthModal, showToast]);
 
   const handleReaction = React.useCallback(async (caseId: string, emoji: 'LIKE' | 'LOVE' | 'ANGRY') => {
     if (!currentUser) {
@@ -207,7 +203,7 @@ export function FeedPage({ initialTab = 'for_you' }: Readonly<FeedPageProps>) {
       console.error('Error toggling reaction:', error);
       showToast(t('toasts.errorProcessingReaction'), 'error');
     }
-  }, [currentUser, reactToCase, t]);
+  }, [currentUser, reactToCase, t, openAuthModal, showToast]);
 
   const handleFollowUser = React.useCallback(async (_userId: string, username: string) => {
     if (!currentUser) return;
@@ -218,7 +214,7 @@ export function FeedPage({ initialTab = 'for_you' }: Readonly<FeedPageProps>) {
       const message = (error as { data?: string } | undefined)?.data;
       showToast(message || t('toasts.errorProcessingFollow'), 'error');
     }
-  }, [currentUser, followUser, t]);
+  }, [currentUser, followUser, t, showToast]);
 
   const handleAddComment = React.useCallback(async (caseId: string, text: string, parentId?: string) => {
     if (!currentUser) {
@@ -233,7 +229,7 @@ export function FeedPage({ initialTab = 'for_you' }: Readonly<FeedPageProps>) {
       console.error('Error adding verdict:', error);
       showToast(t('toasts.errorAddingVerdict'), 'error');
     }
-  }, [currentUser, addComment, refetch, t]);
+  }, [currentUser, addComment, refetch, t, openAuthModal, showToast]);
 
   const handleShareClose = React.useCallback(() => {
     setShowShareModal(false);
@@ -267,7 +263,7 @@ export function FeedPage({ initialTab = 'for_you' }: Readonly<FeedPageProps>) {
       className="flex-1 px-1 md:px-4 pb-32 lg:pb-12 w-full box-border overflow-x-hidden overflow-y-auto no-scrollbar"
       role="main"
     >
-      <Seo 
+      <Seo
         title={titles[initialTab] || ''}
         jsonLd={{
           '@context': 'https://schema.org',
@@ -306,7 +302,7 @@ export function FeedPage({ initialTab = 'for_you' }: Readonly<FeedPageProps>) {
       )}
 
       {!isTopJudges && (
-<motion.div
+        <motion.div
           initial={{ opacity: 0, y: 10 }}
           animate={{ opacity: 1, y: 0 }}
           className="text-center py-6"
@@ -360,8 +356,8 @@ export function FeedPage({ initialTab = 'for_you' }: Readonly<FeedPageProps>) {
         )}
         {!isTopJudges && cases.length === 0 && isLoading && <FeedSkeleton />}
         {!isTopJudges && cases.length === 0 && !isLoading && (
-          <EmptyState 
-            titleKey="profile.noCasesFound" 
+          <EmptyState
+            titleKey="profile.noCasesFound"
           />
         )}
       </div>

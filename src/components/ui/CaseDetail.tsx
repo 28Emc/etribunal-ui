@@ -47,29 +47,22 @@ export const CaseDetail: React.FC<CaseDetailProps> = ({
   caseData,
   currentUser,
   onVote,
-  onShare,
-  onClose,
   onAddComment,
   onDeleteComment,
   onRespondSideB,
   onRegenerateInviteLink,
   onLikeComment,
   onReaction,
-  onToggleSave,
   onUserClick,
   isVoting = false,
-  isSaving = false,
   isCommenting = false,
   isReacting = false,
   isDeleting = false,
-  reactions = { LIKE: 0, LOVE: 0, ANGRY: 0 },
-  userReaction,
   onOpenAuth,
   isModal = true,
   visibleComments = [],
   pendingCount = 0,
   hasMore = true,
-  nextCursor = null,
   isFetching = false,
   fetchOlderComments,
   showNewComments
@@ -121,7 +114,8 @@ export const CaseDetail: React.FC<CaseDetailProps> = ({
   }, [pendingCount]);
 
   useEffect(() => {
-    if (!commentsEndRef.current) return;
+    const endEl = commentsEndRef.current;
+    if (!endEl) return;
 
     const observer = new IntersectionObserver(
       (entries) => {
@@ -137,14 +131,15 @@ export const CaseDetail: React.FC<CaseDetailProps> = ({
       }
     );
 
-    observer.observe(commentsEndRef.current);
+    observer.observe(endEl);
 
     return () => {
-      if (commentsEndRef.current) {
-        observer.unobserve(commentsEndRef.current);
-      }
+      observer.unobserve(endEl);
     };
-  }, [commentsEndRef.current, hasMore, isFetching, visibleComments.length, fetchOlderComments, caseData?.id]);
+  // commentsEndRef.current no es una dependencia válida para useEffect (es un ref);
+  // se copia en una variable local al inicio del effect (patrón correcto según React docs)
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [hasMore, isFetching, visibleComments.length, fetchOlderComments, caseData?.id]);
 
   const userVote =
     caseData?.userVote ?? currentUser?.votes?.[caseData?.id || ''];
@@ -922,12 +917,12 @@ export const CaseDetail: React.FC<CaseDetailProps> = ({
   );
 };
 
-const FullscreenViewer = ({ url, onClose, t }: { url: string; onClose: () => void; t?: any }) => {
+const FullscreenViewer = ({ url, onClose, t }: { url: string; onClose: () => void; t?: (key: string) => string }) => {
   const [scale, setScale] = useState(1);
   const [lastTap, setLastTap] = useState(0);
   const [initialDistance, setInitialDistance] = useState<number | null>(null);
 
-  const handleDoubleTap = (e: React.MouseEvent | React.TouchEvent) => {
+  const handleDoubleTap = () => {
     const now = Date.now();
     if (now - lastTap < 300) {
       setScale(1);
@@ -991,7 +986,7 @@ const FullscreenViewer = ({ url, onClose, t }: { url: string; onClose: () => voi
           style={{ scale }}
           onMouseDown={handleDoubleTap}
           onTouchStart={(e) => {
-            handleDoubleTap(e);
+            handleDoubleTap();
             handleTouchStart(e);
           }}
           onTouchMove={handleTouchMove}

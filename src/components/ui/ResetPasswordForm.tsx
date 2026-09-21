@@ -44,13 +44,7 @@ export function ResetPassword({ onPasswordReset }: Readonly<ResetPasswordProps>)
   const [loading, setLoading] = useState(false);
   const [errors, setErrors] = useState<FormErrors>({});
   const [success, setSuccess] = useState(false);
-  const [tokenError, setTokenError] = useState(false);
-
-  useEffect(() => {
-    if (!token) {
-      setTokenError(true);
-    }
-  }, [token]);
+  const tokenError = !token;
 
   const validateField = (name: keyof FormErrors, value: string): string => {
     switch (name) {
@@ -94,8 +88,9 @@ export function ResetPassword({ onPasswordReset }: Readonly<ResetPasswordProps>)
     try {
       await apiClient.post('/auth/reset-password', { token, newPassword: password });
       setSuccess(true);
-    } catch (err: any) {
-      setErrors({ general: err.message || t('auth.resetPasswordError') });
+    } catch (err: unknown) {
+      const msg = err instanceof Error ? err.message : t('auth.resetPasswordError');
+      setErrors({ general: msg });
     } finally {
       setLoading(false);
     }
@@ -170,7 +165,7 @@ export function ResetPassword({ onPasswordReset }: Readonly<ResetPasswordProps>)
             <p className="text-text-muted text-sm mb-2">
               {t('auth.redirectingToLogin')}
             </p>
-            <Countdown seconds={3} onComplete={() => navigate('/login')} />
+            <Countdown seconds={3} onComplete={() => { onPasswordReset?.(); navigate('/login'); }} />
           </motion.div>
         )}
         {!tokenError && !success && (

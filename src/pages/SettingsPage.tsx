@@ -94,7 +94,7 @@ export const SettingsPage: React.FC = () => {
     return localStorage.getItem('etribunal_receive_notifications') !== 'false';
   });
   const [anonymous, setAnonymous] = useState(user?.is_anonymous || false);
-  const [language, setLanguage] = useState(user?.language || 'es');
+  const [language, setLanguage] = useState(() => user?.language || i18n.language || 'es');
   const [languageDropdown, setLanguageDropdown] = useState(false);
   
   const [isEditingName, setIsEditingName] = useState(false);
@@ -123,8 +123,12 @@ export const SettingsPage: React.FC = () => {
   });
 
   useEffect(() => {
-    if (i18n.language) setLanguage(i18n.language);
-  }, [i18n.language]);
+    const handler = (lng: string) => setLanguage(lng);
+    i18n.on('languageChanged', handler);
+    return () => {
+      i18n.off('languageChanged', handler);
+    };
+  }, [i18n]);
 
   const onThemeToggle = () => {
     const newTheme = theme === 'dark' ? 'light' : 'dark';

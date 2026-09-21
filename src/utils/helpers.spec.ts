@@ -26,7 +26,8 @@ describe('cn', () => {
   });
 
   it('debería manejar clases condicionales', () => {
-    expect(cn('p-4', false && 'hidden', 'm-2')).toBe('p-4 m-2');
+    const condition = false; // constante explicit para que ESLint no la considere siempre-falsa
+    expect(cn('p-4', condition && 'hidden', 'm-2')).toBe('p-4 m-2');
   });
 
   it('debería devolver string vacío sin argumentos', () => {
