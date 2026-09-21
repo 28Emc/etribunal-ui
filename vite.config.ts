@@ -3,6 +3,9 @@ import react from '@vitejs/plugin-react';
 import tailwindcss from '@tailwindcss/vite';
 import { VitePWA } from 'vite-plugin-pwa';
 import path from 'path';
+import { fileURLToPath } from 'node:url';
+
+const __dirname = fileURLToPath(new URL('.', import.meta.url));
 
 export default defineConfig({
   plugins: [
@@ -86,6 +89,13 @@ export default defineConfig({
       include: ['src/**/*.spec.{ts,tsx}', 'src/**/*.test.{ts,tsx}'],
       coverage: {
         provider: 'v8',
+        include: ['src/**/*.{ts,tsx}'],
+        exclude: [
+          'src/**/*.spec.{ts,tsx}',
+          'src/**/*.test.{ts,tsx}',
+          'src/**/*.d.ts',
+          'src/setupTests.ts',
+        ],
         reporter: ['text', 'lcov', 'html'],
         thresholds: {
           lines: 75,

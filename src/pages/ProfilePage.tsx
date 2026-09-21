@@ -102,14 +102,12 @@ export const ProfilePage: React.FC = () => {
     loadingSavedCases = votedQuery.isFetching;
   }
 
-  const [prevUsername, setPrevUsername] = useState(targetUsername);
-  if (prevUsername !== targetUsername) {
-    setPrevUsername(targetUsername);
+  useEffect(() => {
     setLoading(true);
     setSkipCreated(0);
     setSkipSaved(0);
     setSkipVoted(0);
-  }
+  }, [targetUsername]);
 
   const fetchProfile = useCallback(async () => {
     try {

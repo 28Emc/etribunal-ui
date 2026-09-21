@@ -3,8 +3,7 @@ import { useParams, useNavigate } from 'react-router-dom';
 import { useAuth } from '@context/AuthContext';
 import { apiClient } from '@api/client';
 import { useTranslation } from 'react-i18next';
-
-const INVITE_TOKEN_KEY = 'etribunal_invite_token';
+import { setInviteDeepLink } from '@utils/inviteDeepLink';
 
 export function InvitePage() {
   const { token } = useParams<{ token: string }>();
@@ -17,7 +16,7 @@ export function InvitePage() {
     if (authLoading || !token) return;
 
     if (!currentUser) {
-      sessionStorage.setItem(INVITE_TOKEN_KEY, token);
+      setInviteDeepLink(token);
       navigate('/login', { replace: true });
       return;
     }
@@ -53,10 +52,4 @@ export function InvitePage() {
       <div className="animate-spin w-8 h-8 border-4 border-primary border-t-transparent rounded-full" />
     </div>
   );
-}
-
-export function consumeInviteDeepLink(): string | null {
-  const token = sessionStorage.getItem(INVITE_TOKEN_KEY);
-  if (token) sessionStorage.removeItem(INVITE_TOKEN_KEY);
-  return token;
 }

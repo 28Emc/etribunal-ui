@@ -47,12 +47,10 @@ export function FeedPage({ initialTab = 'for_you' }: Readonly<FeedPageProps>) {
 
   const [skip, setSkip] = useState(0);
   const [activeTab, setActiveTab] = useState<FeedTabExtended>(initialTab);
-  const [prevInitialTab, setPrevInitialTab] = useState(initialTab);
-  if (prevInitialTab !== initialTab) {
-    setPrevInitialTab(initialTab);
+  useEffect(() => {
     setActiveTab(initialTab);
     setSkip(0);
-  }
+  }, [initialTab]);
   const [selectedCategory, setSelectedCategory] = useState('All');
 
   const [inviteNotice, setInviteNotice] = useState<string | null>(null);

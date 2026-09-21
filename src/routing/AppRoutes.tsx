@@ -5,7 +5,7 @@ import { AdminLayout } from '@layout/AdminLayout';
 import { LoadingScreen } from '@components/ui/LoadingScreen';
 import { LoadingState } from '@components/ui/LoadingState';
 import { useAuth } from '@context/AuthContext';
-import { consumeInviteDeepLink } from '@pages/InvitePage';
+import { consumeInviteDeepLink } from '@utils/inviteDeepLink';
 import { FeedPage } from '@pages/FeedPage';
 import type { User } from '@typings/index';
 

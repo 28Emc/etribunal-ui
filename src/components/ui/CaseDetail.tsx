@@ -15,29 +15,28 @@ interface CaseDetailProps {
   caseData: Case | null;
   currentUser: User | null;
   onVote: (caseId: string, side: 'A' | 'B' | 'BothWrong') => void;
-  onShare?: (caseId: string) => void;
-  onClose: () => void;
   onAddComment: (caseId: string, text: string, parentId?: string) => void;
   onDeleteComment?: (caseId: string, commentId: string) => void;
   onRespondSideB: (story: string, images: string[]) => void;
   onRegenerateInviteLink: (caseId: string) => Promise<string | null>;
   onLikeComment: (caseId: string, commentId: string) => void;
   onReaction?: (caseId: string, emoji: 'LIKE' | 'LOVE' | 'ANGRY', targetType: 'CASE' | 'COMMENT', targetId: string) => Promise<void>;
-  onToggleSave?: (caseId: string) => void;
   onUserClick?: (username: string) => void;
+  onClose?: () => void;
+  onToggleSave?: (caseId: string) => void;
   isVoting?: boolean;
   isSaving?: boolean;
   isCommenting?: boolean;
   isReacting?: boolean;
   isDeleting?: boolean;
-  reactions?: { LIKE: number; LOVE: number; ANGRY: number };
-  userReaction?: string | null;
   onOpenAuth?: () => void;
   isModal?: boolean;
+  reactions?: Record<string, number>;
+  userReaction?: string | null;
   visibleComments: CaseComment[];
   pendingCount: number;
   hasMore: boolean;
-  nextCursor: string | null;
+  nextCursor?: string | null;
   isFetching: boolean;
   fetchOlderComments: (caseId: string) => void;
   showNewComments: () => void;
@@ -54,15 +53,21 @@ export const CaseDetail: React.FC<CaseDetailProps> = ({
   onLikeComment,
   onReaction,
   onUserClick,
+  onClose,
+  onToggleSave,
   isVoting = false,
+  isSaving = false,
   isCommenting = false,
   isReacting = false,
   isDeleting = false,
   onOpenAuth,
   isModal = true,
+  reactions,
+  userReaction,
   visibleComments = [],
   pendingCount = 0,
   hasMore = true,
+  nextCursor,
   isFetching = false,
   fetchOlderComments,
   showNewComments

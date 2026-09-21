@@ -7,7 +7,7 @@ import { cn } from '@utils/helpers';
 import type { Case, UserSearchResult } from '@typings/index';
 import { useAuth } from '@context/AuthContext';
 import { apiClient } from '@api/client';
-import { Tooltip } from '@components/ui/Tooltip';
+
 import { PageLayout } from '@layout/PageLayout';
 import { Seo } from '@components/ui/SEO';
 import { getAnonymousAvatar } from '@services/anonymity';
@@ -123,7 +123,7 @@ export function CreateCasePage() {
     return Object.values(newErrors).every(err => err === '');
   };
 
-  const handleSubmit = async (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
     setErrors(prev => ({ ...prev, general: undefined }));
 
@@ -452,10 +452,9 @@ onClick={() => {
 
                     {sideBInputFocused && sideBQuery.trim().length >= 2 && (
                       <div className="bg-card border border-border-main/10 rounded-[28px] overflow-hidden">
-                        {isSearchingUsers ? (
-                          <div className="px-5 py-4 text-[11px] font-bold uppercase tracking-widest text-text-muted">{t('cases.searchingUsers')}</div>
-                        ) : sideBResults.length > 0 ? (
-                          sideBResults.map((user) => (
+                        {(() => {
+                          if (isSearchingUsers) return <div className="px-5 py-4 text-[11px] font-bold uppercase tracking-widest text-text-muted">{t('cases.searchingUsers')}</div>;
+                          if (sideBResults.length > 0) return sideBResults.map((user) => (
                             <button
                               key={user.id}
                               type="button"
@@ -477,10 +476,9 @@ onClick={() => {
                                 <p className="text-[11px] text-text-muted truncate">{user.bio || t('cases.noBioAvailable')}</p>
                               </div>
                             </button>
-                          ))
-                        ) : (
-                          <div className="px-5 py-4 text-[11px] font-bold text-text-muted">{t('cases.noUsersMatched')}</div>
-                        )}
+                          ));
+                          return <div className="px-5 py-4 text-[11px] font-bold text-text-muted">{t('cases.noUsersMatched')}</div>;
+                        })()}
                       </div>
                     )}
                   </div>
@@ -578,17 +576,17 @@ onClick={() => {
               </div>
 
               <div className="grid grid-cols-2 gap-4">
-                {images.map((img, idx) => (
+                {images.map((img) => (
                   <motion.div
+                    key={img.url}
                     initial={{ opacity: 0, scale: 0.8 }}
                     animate={{ opacity: 1, scale: 1 }}
-                    key={idx}
                     className="aspect-4/3 rounded-2xl overflow-hidden border border-border-main/10 relative group"
                   >
                     <img src={img.url} alt="" className="w-full h-full object-cover" referrerPolicy="no-referrer" />
                     <button
                       type="button"
-                      onClick={() => setImages(prev => prev.filter((_, i) => i !== idx))}
+                      onClick={() => setImages(prev => prev.filter((i) => i.url !== img.url))}
                       className="absolute top-1 right-1 md:top-2 md:right-2 w-8 h-8 md:w-6 md:h-6 bg-black/60 md:bg-black/50 rounded-full flex items-center justify-center opacity-100 md:opacity-0 md:group-hover:opacity-100 transition-all hover:bg-red-500"
                     >
                       <X className="w-4 h-4 text-white" />
@@ -654,8 +652,8 @@ onClick={() => {
               )}
             </AnimatePresence>
           </form>
-        ) : (
-          submittedType === 'classic' ? (
+        ) : (() => {
+          if (submittedType === 'classic') return (
             <motion.div
               initial={{ opacity: 0, scale: 0.9 }}
               animate={{ opacity: 1, scale: 1 }}
@@ -669,7 +667,8 @@ onClick={() => {
                 <p className="text-text-muted font-medium">{t('cases.casePublic')}</p>
               </div>
             </motion.div>
-          ) : (
+          );
+          return (
             <motion.div
               initial={{ opacity: 0, scale: 0.9 }}
               animate={{ opacity: 1, scale: 1 }}
@@ -710,8 +709,8 @@ onClick={() => {
                 </div>
               </div>
             </motion.div>
-          )
-        )}
+          );
+        })()}
       </div>
     </PageLayout>
   );

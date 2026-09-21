@@ -1,5 +1,15 @@
 import { describe, it, expect, vi } from 'vitest';
-import { cn, formatNumber, formatRelativeCaseDate, createSlug, getCasePath, sleep } from './helpers';
+import {
+  calculateVotePercentages,
+  cn,
+  createSlug,
+  formatNumber,
+  formatRelativeCaseDate,
+  getCasePath,
+  safeJsonParse,
+  sanitizeImageUrl,
+  sleep,
+} from './helpers';
 
 vi.mock('@services/i18n', () => ({
   default: {
@@ -26,8 +36,8 @@ describe('cn', () => {
   });
 
   it('debería manejar clases condicionales', () => {
-    const condition = false; // constante explicit para que ESLint no la considere siempre-falsa
-    expect(cn('p-4', condition && 'hidden', 'm-2')).toBe('p-4 m-2');
+    const condition = false;
+    expect(cn('p-4', condition ? 'hidden' : undefined, 'm-2')).toBe('p-4 m-2');
   });
 
   it('debería devolver string vacío sin argumentos', () => {
@@ -177,5 +187,67 @@ describe('sleep', () => {
     const start = Date.now();
     await sleep(5);
     expect(Date.now() - start).toBeGreaterThanOrEqual(4);
+  });
+});
+
+describe('safeJsonParse', () => {
+  it('debería devolver el JSON parseado', () => {
+    expect(safeJsonParse('{"enabled":true}', { enabled: false })).toEqual({ enabled: true });
+  });
+
+  it('debería devolver el fallback cuando el JSON es inválido', () => {
+    const fallback = { enabled: false };
+    expect(safeJsonParse('{invalid', fallback)).toBe(fallback);
+  });
+});
+
+describe('sanitizeImageUrl', () => {
+  it('debería aceptar URLs HTTP y HTTPS', () => {
+    expect(sanitizeImageUrl('https://cdn.example.com/image.jpg')).toBe(
+      'https://cdn.example.com/image.jpg',
+    );
+    expect(sanitizeImageUrl('http://localhost:4566/image.jpg')).toBe(
+      'http://localhost:4566/image.jpg',
+    );
+  });
+
+  it('debería resolver rutas relativas contra el origen actual', () => {
+    expect(sanitizeImageUrl('/images/avatar.png')).toBe(
+      `${window.location.origin}/images/avatar.png`,
+    );
+  });
+
+  it('debería rechazar protocolos peligrosos, inválidos y URLs vacías', () => {
+    expect(sanitizeImageUrl('javascript:alert(1)')).toBe('/placeholder-image.png');
+    expect(sanitizeImageUrl('data:image/png;base64,abc')).toBe('/placeholder-image.png');
+    expect(sanitizeImageUrl('')).toBe('/placeholder-image.png');
+    expect(sanitizeImageUrl('ftp://example.com/image.jpg', '/fallback.svg')).toBe('/fallback.svg');
+  });
+});
+
+describe('calculateVotePercentages', () => {
+  it('debería devolver ceros y empate cuando no hay votos', () => {
+    expect(calculateVotePercentages(0, 0, 0)).toEqual({
+      totalVotes: 0,
+      percentA: 0,
+      percentB: 0,
+      percentBoth: 0,
+      winner: 'Tie',
+    });
+  });
+
+  it('debería calcular porcentajes y ganador A', () => {
+    expect(calculateVotePercentages(2, 1, 1)).toEqual({
+      totalVotes: 4,
+      percentA: 50,
+      percentB: 25,
+      percentBoth: 25,
+      winner: 'A',
+    });
+  });
+
+  it('debería calcular ganador B y empate', () => {
+    expect(calculateVotePercentages(1, 3, 0).winner).toBe('B');
+    expect(calculateVotePercentages(1, 1, 2).winner).toBe('Tie');
   });
 });

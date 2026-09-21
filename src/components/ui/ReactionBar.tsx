@@ -194,19 +194,15 @@ const ReactionBarComponent: React.FC<ReactionBarProps> = ({
   const reactionConfig = getReactionConfig(isDark);
 
   const isSmall = size === 'sm';
-  const [prevReactions, setPrevReactions] = useState(reactions);
   const [localReactions, setLocalReactions] = useState(reactions);
-  if (prevReactions !== reactions) {
-    setPrevReactions(reactions);
+  useEffect(() => {
     setLocalReactions(reactions);
-  }
+  }, [reactions]);
 
-  const [prevUserReaction, setPrevUserReaction] = useState(userReaction);
   const [localUserReaction, setLocalUserReaction] = useState(userReaction);
-  if (prevUserReaction !== userReaction) {
-    setPrevUserReaction(userReaction);
+  useEffect(() => {
     setLocalUserReaction(userReaction);
-  }
+  }, [userReaction]);
 
   const totalReactions = (localReactions.LIKE || 0) + (localReactions.LOVE || 0) + (localReactions.ANGRY || 0);
   const [justReacted, setJustReacted] = useState(false);

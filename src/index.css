@@ -70,7 +70,7 @@ input[type="password"]::-ms-clear {
   border: 1px solid color-mix(in srgb, var(--border) 30%, transparent);
 }
 
-@utility no-scrollbar {
+@utility no-scrollbar { /* NOSONAR - Tailwind v4 @utility, valid scoping */
   &::-webkit-scrollbar {
     display: none;
   }
@@ -78,7 +78,7 @@ input[type="password"]::-ms-clear {
   scrollbar-width: none;
 }
 
-@utility subtle-scrollbar {
+@utility subtle-scrollbar { /* NOSONAR - Tailwind v4 @utility, valid scoping */
   &::-webkit-scrollbar {
     width: 4px;
     height: 4px;
